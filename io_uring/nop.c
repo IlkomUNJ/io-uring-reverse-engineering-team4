@@ -11,6 +11,16 @@
 #include "rsrc.h"
 #include "nop.h"
 
+/**
+ * struct io_nop - Represents a no-op (NOP) operation in io_uring
+ * @file: Optional file pointer if NOP_FILE flag is used
+ * @result: Value to inject as the completion result (if NOP_INJECT_RESULT is set)
+ * @fd: File descriptor to reference (if NOP_FILE is set)
+ * @flags: Flags controlling NOP behavior (e.g., fixed file, inject result)
+ *
+ * Used to test or simulate different conditions in io_uring without performing real I/O.
+ */
+
 struct io_nop {
 	/* NOTE: kiocb has the file as the first member, so don't do it here */
 	struct file     *file;
@@ -21,6 +31,17 @@ struct io_nop {
 
 #define NOP_FLAGS	(IORING_NOP_INJECT_RESULT | IORING_NOP_FIXED_FILE | \
 			 IORING_NOP_FIXED_BUFFER | IORING_NOP_FILE)
+
+/**
+ * io_nop_prep - Prepare a no-op request based on submission queue entry
+ * @req: The io_kiocb request being prepared
+ * @sqe: Submission queue entry containing NOP-specific fields
+ *
+ * Parses and validates NOP-specific flags from the SQE, and stores relevant data
+ * such as a fake result value, file descriptor, and buffer index if provided.
+ *
+ * Returns 0 on success or -EINVAL if unsupported flags are used.
+ */
 
 int io_nop_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
@@ -42,6 +63,18 @@ int io_nop_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 		req->buf_index = READ_ONCE(sqe->buf_index);
 	return 0;
 }
+
+/**
+ * io_nop - Execute a prepared no-op request
+ * @req: The io_kiocb request to execute
+ * @issue_flags: Flags relevant to issuing the request (e.g., fixed file access)
+ *
+ * This function optionally attempts to get a file and/or buffer as if real I/O were happening.
+ * It can simulate file access errors and return pre-set result values.
+ * Primarily used for testing io_uring features like fixed file or fixed buffer handling.
+ *
+ * Returns IOU_OK. Sets request result and fail flag as appropriate.
+ */
 
 int io_nop(struct io_kiocb *req, unsigned int issue_flags)
 {

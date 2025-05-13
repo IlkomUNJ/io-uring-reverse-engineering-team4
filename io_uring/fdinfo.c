@@ -16,6 +16,20 @@
 #include "rsrc.h"
 
 #ifdef CONFIG_PROC_FS
+/*
+ * io_uring_show_cred - Dump user credential information for io_uring
+ *
+ * @m: seq_file used for output
+ * @id: ID value to display (e.g., process or io_uring instance ID)
+ * @cred: Pointer to credential structure to report
+ *
+ * Displays detailed user and group ID information, including all real, effective,
+ * saved, and filesystem UIDs and GIDs, supplementary groups, and effective capabilities.
+ * This is typically used in procfs (/proc/*/fdinfo) to provide information about
+ * the credentials associated with an io_uring instance.
+ *
+ * Returns 0 on success.
+*/
 static __cold int io_uring_show_cred(struct seq_file *m, unsigned int id,
 		const struct cred *cred)
 {
@@ -47,6 +61,16 @@ static __cold int io_uring_show_cred(struct seq_file *m, unsigned int id,
 }
 
 #ifdef CONFIG_NET_RX_BUSY_POLL
+/*
+ * common_tracking_show_fdinfo - Print common NAPI tracking information
+ *
+ * @ctx: Pointer to io_ring_ctx structure
+ * @m: seq_file used for output
+ * @tracking_strategy: String representation of the NAPI tracking mode
+ *
+ * Outputs NAPI tracking configuration for io_uring, including whether busy-polling
+ * is enabled and the delay time before polling kicks in.
+ */
 static __cold void common_tracking_show_fdinfo(struct io_ring_ctx *ctx,
 					       struct seq_file *m,
 					       const char *tracking_strategy)
@@ -60,6 +84,16 @@ static __cold void common_tracking_show_fdinfo(struct io_ring_ctx *ctx,
 		seq_puts(m, "napi_prefer_busy_poll:\tfalse\n");
 }
 
+/*
+ * napi_show_fdinfo - Display NAPI tracking state in io_uring
+ *
+ * @ctx: Pointer to io_ring_ctx structure
+ * @m: seq_file used for output
+ *
+ * Depending on the current NAPI tracking mode (static, dynamic, or inactive),
+ * this function outputs detailed tracking configuration to the provided seq_file.
+ * Used for diagnostic or introspection purposes via fdinfo.
+ */
 static __cold void napi_show_fdinfo(struct io_ring_ctx *ctx,
 				    struct seq_file *m)
 {
@@ -80,6 +114,17 @@ static __cold void napi_show_fdinfo(struct io_ring_ctx *ctx,
 	}
 }
 #else
+/**
+ * napi_show_fdinfo - Display NAPI-related fdinfo for io_uring file descriptor
+ * @ctx:    Pointer to io_uring context (struct io_ring_ctx)
+ * @m:      Pointer to seq_file for writing debug information
+ *
+ * This function is conditionally compiled when CONFIG_NET_RX_BUSY_POLL is
+ * enabled and provides additional NAPI-related information associated with
+ * the io_uring file descriptor. It is used internally by io_uring_show_fdinfo()
+ * to append NAPI-specific data to the output. The function body is empty if
+ * the relevant configuration is not set.
+ */
 static inline void napi_show_fdinfo(struct io_ring_ctx *ctx,
 				    struct seq_file *m)
 {
@@ -89,6 +134,37 @@ static inline void napi_show_fdinfo(struct io_ring_ctx *ctx,
 /*
  * Caller holds a reference to the file already, we don't need to do
  * anything else to get an extra reference.
+ */
+
+/*
+ * io_uring_show_fdinfo - Dump internal io_uring state to /proc/<pid>/fdinfo/<fd>
+ * @m:     Pointer to seq_file used for sequential output
+ * @file:  File descriptor associated with the io_uring instance
+ *
+ * This function is called when user-space accesses /proc/<pid>/fdinfo/<fd> for
+ * an io_uring-enabled file descriptor. It provides detailed state information
+ * about the submission and completion queues, buffer registrations, polling threads,
+ * personalities, and other internal runtime metadata related to the ring.
+ *
+ * Output includes:
+ *   - SQ/CQ mask, head/tail pointers, and active SQEs/CQEs
+ *   - Detailed listing of pending SQEs (opcodes, file descriptors, flags, etc.)
+ *   - CQEs including overflow list entries
+ *   - SQPOLL thread info: PID, CPU affinity, usage stats
+ *   - Registered files and buffers
+ *   - Personalities (credential mappings)
+ *   - Poll request list (e.g. POLL_ADD)
+ *
+ * Concurrency and Locking:
+ *   - Uses mutex_trylock() to avoid deadlocks between the uring mutex and
+ *     the seq lock taken by /proc handlers. If lock acquisition fails, certain
+ *     sections like file and buffer tables are skipped for safety.
+ *   - Uses spin_lock() to safely access overflow CQEs list.
+ *
+ * Notes:
+ *   - Only invoked for introspection/debugging; not performance critical.
+ *   - May report slightly stale values due to relaxed locking on fast path
+ *     (e.g. cached_sq_head, cached_cq_tail).
  */
 __cold void io_uring_show_fdinfo(struct seq_file *m, struct file *file)
 {

@@ -36,6 +36,16 @@ struct io_fixed_install {
 	unsigned int			o_flags;
 };
 
+/*
+ * io_openat_force_async - determine if openat must be forced async
+ * @open: io_open structure containing open flags
+ *
+ * Checks if the open operation involves O_TRUNC, O_CREAT, or __O_TMPFILE.
+ * These flags require forcing asynchronous execution as they would
+ * otherwise return -EAGAIN under non-blocking execution.
+ *
+ * Return: true if the operation should be forced async, false otherwise
+ */
 static bool io_openat_force_async(struct io_open *open)
 {
 	/*
@@ -47,6 +57,16 @@ static bool io_openat_force_async(struct io_open *open)
 	return open->how.flags & (O_TRUNC | O_CREAT | __O_TMPFILE);
 }
 
+/*
+ * __io_openat_prep - internal helper to prepare for openat
+ * @req: the io_kiocb request
+ * @sqe: submission queue entry containing user data
+ *
+ * Performs common preparation tasks for openat/openat2, including fetching
+ * filename from userspace, checking flags, and setting up necessary state.
+ *
+ * Return: 0 on success, negative errno on failure
+ */
 static int __io_openat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_open *open = io_kiocb_to_cmd(req, struct io_open);
@@ -82,6 +102,16 @@ static int __io_openat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe
 	return 0;
 }
 
+/*
+ * io_openat_prep - prepare an openat operation
+ * @req: the io_kiocb request
+ * @sqe: submission queue entry containing user data
+ *
+ * Parses open_flags and mode from the SQE and constructs an open_how struct,
+ * then calls internal helper for additional setup.
+ *
+ * Return: 0 on success, negative errno on failure
+ */
 int io_openat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_open *open = io_kiocb_to_cmd(req, struct io_open);
@@ -92,6 +122,16 @@ int io_openat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return __io_openat_prep(req, sqe);
 }
 
+/*
+ * io_openat2_prep - prepare an openat2 operation
+ * @req: the io_kiocb request
+ * @sqe: submission queue entry containing user data
+ *
+ * Copies an open_how struct from userspace and performs initial checks.
+ * Delegates further preparation to internal helper.
+ *
+ * Return: 0 on success, negative errno on failure
+ */
 int io_openat2_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_open *open = io_kiocb_to_cmd(req, struct io_open);
@@ -111,6 +151,18 @@ int io_openat2_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return __io_openat_prep(req, sqe);
 }
 
+/*
+ * io_openat2 - execute an openat2 operation
+ * @req: the io_kiocb request
+ * @issue_flags: execution context flags (e.g., IO_URING_F_NONBLOCK)
+ *
+ * Attempts to perform the openat2 system call using the prepared `how` and
+ * `filename` data. Handles non-blocking, file descriptor allocation,
+ * and file installation. Supports fixed and dynamic file descriptor
+ * management.
+ *
+ * Return: IOU_OK (0) after completion; sets result in request
+ */
 int io_openat2(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_open *open = io_kiocb_to_cmd(req, struct io_open);
@@ -172,11 +224,27 @@ err:
 	return IOU_OK;
 }
 
+/*
+ * io_openat - wrapper for io_openat2 to support legacy openat
+ * @req: the io_kiocb request
+ * @issue_flags: execution context flags
+ *
+ * Legacy entry point that reuses io_openat2 logic.
+ *
+ * Return: IOU_OK (0) after completion
+ */
 int io_openat(struct io_kiocb *req, unsigned int issue_flags)
 {
 	return io_openat2(req, issue_flags);
 }
 
+/*
+ * io_open_cleanup - Membersihkan sumber daya yang dialokasikan untuk permintaan open.
+ * @req: Pointer ke struktur io_kiocb dari permintaan open.
+ *
+ * Fungsi ini digunakan untuk membebaskan memori nama file (filename) yang diperoleh
+ * saat persiapan openat/openat2 setelah operasi selesai atau dibatalkan.
+ */
 void io_open_cleanup(struct io_kiocb *req)
 {
 	struct io_open *open = io_kiocb_to_cmd(req, struct io_open);
@@ -185,6 +253,17 @@ void io_open_cleanup(struct io_kiocb *req)
 		putname(open->filename);
 }
 
+/*
+ * __io_close_fixed - Menutup file descriptor tetap (fixed fd) dari io_uring.
+ * @ctx: Context io_ring.
+ * @issue_flags: Flag eksekusi permintaan.
+ * @offset: Slot file yang akan ditutup.
+ *
+ * Menghapus file descriptor tetap dari fixed file table. Harus dipanggil
+ * saat file disimpan menggunakan fixed file index.
+ *
+ * Return: 0 jika sukses, atau kode kesalahan negatif.
+ */
 int __io_close_fixed(struct io_ring_ctx *ctx, unsigned int issue_flags,
 		     unsigned int offset)
 {
@@ -197,6 +276,13 @@ int __io_close_fixed(struct io_ring_ctx *ctx, unsigned int issue_flags,
 	return ret;
 }
 
+/*
+ * io_close_fixed - Wrapper untuk menutup file descriptor tetap.
+ * @req: Pointer ke struktur io_kiocb.
+ * @issue_flags: Flag eksekusi permintaan.
+ *
+ * Return: Hasil dari __io_close_fixed.
+ */
 static inline int io_close_fixed(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_close *close = io_kiocb_to_cmd(req, struct io_close);
@@ -204,6 +290,15 @@ static inline int io_close_fixed(struct io_kiocb *req, unsigned int issue_flags)
 	return __io_close_fixed(req->ctx, issue_flags, close->file_slot - 1);
 }
 
+/*
+ * io_close_prep - Mempersiapkan permintaan close.
+ * @req: Pointer ke struktur io_kiocb.
+ * @sqe: Submission queue entry.
+ *
+ * Memvalidasi parameter SQE dan mengisi informasi fd atau file_slot.
+ *
+ * Return: 0 jika sukses, atau kode kesalahan negatif jika parameter tidak valid.
+ */
 int io_close_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_close *close = io_kiocb_to_cmd(req, struct io_close);
@@ -220,6 +315,18 @@ int io_close_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 
 	return 0;
 }
+
+/*
+ * io_close - Menangani permintaan close.
+ * @req: Pointer ke struktur io_kiocb.
+ * @issue_flags: Flag eksekusi permintaan.
+ *
+ * Menutup file descriptor biasa atau fixed file berdasarkan isi `io_close`.
+ * Jika file memiliki metode flush dan operasi harus non-blocking, akan gagal
+ * dengan -EAGAIN untuk dijalankan secara async.
+ *
+ * Return: IOU_OK setelah mengatur hasil dalam `req`.
+ */
 
 int io_close(struct io_kiocb *req, unsigned int issue_flags)
 {
@@ -260,6 +367,16 @@ err:
 	return IOU_OK;
 }
 
+/*
+ * io_install_fixed_fd_prep - Mempersiapkan permintaan instalasi fixed fd.
+ * @req: Pointer ke struktur io_kiocb.
+ * @sqe: Submission queue entry.
+ *
+ * Validasi parameter dan siapkan flag O_CLOEXEC untuk instalasi file descriptor
+ * ke dalam fixed file slot.
+ *
+ * Return: 0 jika sukses, atau kode kesalahan negatif jika parameter tidak valid.
+ */
 int io_install_fixed_fd_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_fixed_install *ifi;
@@ -289,6 +406,17 @@ int io_install_fixed_fd_prep(struct io_kiocb *req, const struct io_uring_sqe *sq
 
 	return 0;
 }
+
+/*
+ * io_install_fixed_fd - Menangani instalasi file descriptor ke fixed fd slot.
+ * @req: Pointer ke struktur io_kiocb.
+ * @issue_flags: Flag eksekusi permintaan.
+ *
+ * Menerima file descriptor yang dihasilkan oleh operasi sebelumnya dan
+ * menginstalnya ke fixed fd table dengan flag CLOEXEC jika diperlukan.
+ *
+ * Return: IOU_OK setelah menyimpan hasil dalam req.
+ */
 
 int io_install_fixed_fd(struct io_kiocb *req, unsigned int issue_flags)
 {

@@ -14,6 +14,21 @@
 #include "io_uring.h"
 #include "splice.h"
 
+/**
+ * struct io_splice - Data structure for splice and tee operations in io_uring
+ * @file_out:     Destination file for splice/tee output
+ * @off_out:      Output file offset; -1 if current position should be used
+ * @off_in:       Input file offset; -1 if current position should be used
+ * @len:          Number of bytes to splice or tee
+ * @splice_fd_in: Input file descriptor (used if not SPLICE_F_FD_IN_FIXED)
+ * @flags:        Splice operation flags (e.g., SPLICE_F_MOVE, SPLICE_F_MORE)
+ * @rsrc_node:    Resource node for fixed input file descriptor (if used)
+ *
+ * This structure holds all relevant parameters for performing splice or tee
+ * operations asynchronously through io_uring. It supports both dynamic and
+ * fixed file descriptor sources and tracks offset, size, and operation flags.
+ */
+
 struct io_splice {
 	struct file			*file_out;
 	loff_t				off_out;
@@ -23,6 +38,21 @@ struct io_splice {
 	unsigned int			flags;
 	struct io_rsrc_node		*rsrc_node;
 };
+
+/**
+ * __io_splice_prep - Common preparation logic for splice and tee requests
+ * @req:  io_kiocb request structure
+ * @sqe:  Submission Queue Entry containing the splice parameters
+ *
+ * Extracts and validates common splice/tee parameters:
+ *   - Reads length, flags, and input file descriptor
+ *   - Verifies that no invalid flags are used
+ *   - Marks request for asynchronous execution
+ *
+ * Returns:
+ *   - 0 on success
+ *   - -EINVAL if unsupported flags are present
+ */
 
 static int __io_splice_prep(struct io_kiocb *req,
 			    const struct io_uring_sqe *sqe)
@@ -40,12 +70,33 @@ static int __io_splice_prep(struct io_kiocb *req,
 	return 0;
 }
 
+/**
+ * io_tee_prep - Prepare a tee operation
+ * @req:  io_kiocb request structure
+ * @sqe:  Submission Queue Entry containing tee parameters
+ *
+ * Validates that offsets are zero (required for tee), then delegates
+ * common preparation to __io_splice_prep().
+ *
+ * Returns:
+ *   - 0 on success
+ *   - -EINVAL if any offset is non-zero
+ */
+
 int io_tee_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	if (READ_ONCE(sqe->splice_off_in) || READ_ONCE(sqe->off))
 		return -EINVAL;
 	return __io_splice_prep(req, sqe);
 }
+
+/**
+ * io_splice_cleanup - Release resources associated with a splice request
+ * @req:  io_kiocb request whose resources are to be released
+ *
+ * Decrements the reference count of the fixed file resource node if used.
+ * Called after the splice operation is complete to prevent resource leaks.
+ */
 
 void io_splice_cleanup(struct io_kiocb *req)
 {
@@ -54,6 +105,20 @@ void io_splice_cleanup(struct io_kiocb *req)
 	if (sp->rsrc_node)
 		io_put_rsrc_node(req->ctx, sp->rsrc_node);
 }
+
+/**
+ * io_splice_get_file - Retrieve the input file for splice or tee
+ * @req:          io_kiocb request containing splice parameters
+ * @issue_flags:  Issue-time flags for locking context
+ *
+ * Resolves the input file descriptor for splice:
+ *   - If SPLICE_F_FD_IN_FIXED is not set, uses standard file lookup
+ *   - If fixed, locates file from fixed file table and bumps reference
+ *
+ * Returns:
+ *   - Pointer to the input file on success
+ *   - NULL if the file cannot be resolved
+ */
 
 static struct file *io_splice_get_file(struct io_kiocb *req,
 				       unsigned int issue_flags)
@@ -77,6 +142,21 @@ static struct file *io_splice_get_file(struct io_kiocb *req,
 	io_ring_submit_unlock(ctx, issue_flags);
 	return file;
 }
+/**
+ * io_tee - Perform a tee operation between two pipes
+ * @req:          io_kiocb representing the tee request
+ * @issue_flags:  Flags used during request submission
+ *
+ * Uses `do_tee()` to duplicate pipe data without consuming it:
+ *   - Retrieves input file from descriptor or fixed slot
+ *   - Performs tee from input pipe to output pipe for given length
+ *   - Releases input file if not fixed
+ *
+ * Completion result is set to the number of bytes tee'd or an error.
+ *
+ * Returns:
+ *   - IOU_OK always (completion status handled internally)
+ */
 
 int io_tee(struct io_kiocb *req, unsigned int issue_flags)
 {
@@ -105,6 +185,18 @@ done:
 	io_req_set_res(req, ret, 0);
 	return IOU_OK;
 }
+/**
+ * io_splice_prep - Prepare a splice operation
+ * @req:  io_kiocb request structure
+ * @sqe:  Submission Queue Entry containing splice parameters
+ *
+ * Reads and stores input and output offsets, then delegates
+ * the rest of the preparation to __io_splice_prep().
+ *
+ * Returns:
+ *   - 0 on success
+ *   - -EINVAL for invalid flags or parameters
+ */
 
 int io_splice_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
@@ -114,6 +206,22 @@ int io_splice_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	sp->off_out = READ_ONCE(sqe->off);
 	return __io_splice_prep(req, sqe);
 }
+/**
+ * io_splice - Perform a splice operation between two files
+ * @req:          io_kiocb representing the splice request
+ * @issue_flags:  Submission-time flags
+ *
+ * Uses `do_splice()` to transfer data between files or pipes:
+ *   - Resolves input and output files
+ *   - Applies optional offsets if provided
+ *   - Performs the splice for the specified length and flags
+ *   - Cleans up input file reference if not fixed
+ *
+ * Sets completion result to the number of bytes spliced or error.
+ *
+ * Returns:
+ *   - IOU_OK always (completion is handled internally)
+ */
 
 int io_splice(struct io_kiocb *req, unsigned int issue_flags)
 {

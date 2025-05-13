@@ -47,6 +47,21 @@ struct io_link {
 	int				flags;
 };
 
+/*
+ * io_renameat_prep - Prepare a renameat2 operation
+ * @req: The io_kiocb associated with the request
+ * @sqe: Submission queue entry containing rename parameters
+ *
+ * Validates the sqe fields, extracts file descriptors, flags, and file names,
+ * and prepares the rename operation. Allocates memory for old and new paths,
+ * and sets request flags for async execution and cleanup.
+ *
+ * Return:
+ * * 0 on success
+ * * -EINVAL for invalid SQE fields
+ * * -EBADF if fixed files are used
+ * * PTR_ERR on failure to get path names
+ */
 int io_renameat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_rename *ren = io_kiocb_to_cmd(req, struct io_rename);
@@ -78,6 +93,17 @@ int io_renameat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_renameat - Perform a renameat2 syscall
+ * @req:          The io_kiocb request
+ * @issue_flags:  Flags indicating how the request is issued
+ *
+ * Executes the renameat2 syscall with parameters prepared by io_renameat_prep().
+ * Assumes the operation must run synchronously. Clears cleanup flags after execution.
+ *
+ * Return:
+ * * IOU_OK after storing the syscall result into the request
+ */
 int io_renameat(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_rename *ren = io_kiocb_to_cmd(req, struct io_rename);
@@ -93,6 +119,12 @@ int io_renameat(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_renameat_cleanup - Cleanup allocated pathnames for renameat
+ * @req: The io_kiocb request to clean up
+ *
+ * Frees the old and new pathnames allocated during preparation of the rename request.
+ */
 void io_renameat_cleanup(struct io_kiocb *req)
 {
 	struct io_rename *ren = io_kiocb_to_cmd(req, struct io_rename);
@@ -101,6 +133,20 @@ void io_renameat_cleanup(struct io_kiocb *req)
 	putname(ren->newpath);
 }
 
+/*
+ * io_unlinkat_prep - Prepare an unlinkat or rmdir operation
+ * @req: The io_kiocb request
+ * @sqe: Submission queue entry with unlink parameters
+ *
+ * Parses the unlink SQE, validates flags, and retrieves the target path.
+ * Only AT_REMOVEDIR is supported as a valid flag. Allocates memory for the path.
+ *
+ * Return:
+ * * 0 on success
+ * * -EINVAL for invalid flags or SQE fields
+ * * -EBADF if fixed file is used
+ * * PTR_ERR on failure to get path name
+ */
 int io_unlinkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_unlink *un = io_kiocb_to_cmd(req, struct io_unlink);
@@ -127,6 +173,17 @@ int io_unlinkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_unlinkat - Execute unlinkat or rmdir syscall
+ * @req:          The io_kiocb request
+ * @issue_flags:  Flags indicating how the request is issued
+ *
+ * Executes either unlinkat() or rmdir() depending on the flags set during
+ * request preparation. Stores the result in the request and clears cleanup flags.
+ *
+ * Return:
+ * * IOU_OK after storing the syscall result
+ */
 int io_unlinkat(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_unlink *un = io_kiocb_to_cmd(req, struct io_unlink);
@@ -144,6 +201,12 @@ int io_unlinkat(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_unlinkat_cleanup - Cleanup unlinkat request resources
+ * @req: The io_kiocb request to clean up
+ *
+ * Releases the filename allocated during unlinkat request preparation.
+ */
 void io_unlinkat_cleanup(struct io_kiocb *req)
 {
 	struct io_unlink *ul = io_kiocb_to_cmd(req, struct io_unlink);
@@ -151,6 +214,20 @@ void io_unlinkat_cleanup(struct io_kiocb *req)
 	putname(ul->filename);
 }
 
+/*
+ * io_mkdirat_prep - Prepare a mkdirat operation
+ * @req: The io_kiocb request
+ * @sqe: Submission queue entry containing mkdir parameters
+ *
+ * Validates the SQE fields, extracts the directory file descriptor and mode,
+ * and retrieves the filename. Sets flags for async execution and resource cleanup.
+ *
+ * Return:
+ * * 0 on success
+ * * -EINVAL for invalid SQE fields
+ * * -EBADF if fixed files are used
+ * * PTR_ERR on failure to retrieve the filename
+ */
 int io_mkdirat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_mkdir *mkd = io_kiocb_to_cmd(req, struct io_mkdir);
@@ -174,6 +251,17 @@ int io_mkdirat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_mkdirat - Execute mkdirat syscall
+ * @req:          The io_kiocb request
+ * @issue_flags:  Flags indicating how the request is issued
+ *
+ * Performs a mkdirat syscall using parameters prepared by io_mkdirat_prep().
+ * Stores the syscall result in the request and clears the cleanup flag.
+ *
+ * Return:
+ * * IOU_OK after completing the mkdirat syscall
+ */
 int io_mkdirat(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_mkdir *mkd = io_kiocb_to_cmd(req, struct io_mkdir);
@@ -188,6 +276,12 @@ int io_mkdirat(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_mkdirat_cleanup - Cleanup mkdirat request resources
+ * @req: The io_kiocb request to clean up
+ *
+ * Releases the filename allocated during mkdirat preparation.
+ */
 void io_mkdirat_cleanup(struct io_kiocb *req)
 {
 	struct io_mkdir *md = io_kiocb_to_cmd(req, struct io_mkdir);
@@ -195,6 +289,21 @@ void io_mkdirat_cleanup(struct io_kiocb *req)
 	putname(md->filename);
 }
 
+/*
+ * io_symlinkat_prep - Prepare a symlinkat operation
+ * @req: The io_kiocb request
+ * @sqe: Submission queue entry containing symlink parameters
+ *
+ * Parses the SQE, validates fields, and retrieves both the target path
+ * (oldpath) and the link path (newpath). Sets flags for async execution
+ * and resource cleanup.
+ *
+ * Return:
+ * * 0 on success
+ * * -EINVAL for invalid SQE fields
+ * * -EBADF if fixed file is used
+ * * PTR_ERR on failure to retrieve paths
+ */
 int io_symlinkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_link *sl = io_kiocb_to_cmd(req, struct io_link);
@@ -224,6 +333,17 @@ int io_symlinkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_symlinkat - Execute symlinkat syscall
+ * @req:          The io_kiocb request
+ * @issue_flags:  Flags indicating how the request is issued
+ *
+ * Performs a symlinkat syscall using the parameters set in the preparation
+ * phase. Stores the result and clears any cleanup flags.
+ *
+ * Return:
+ * * IOU_OK after executing the syscall
+ */
 int io_symlinkat(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_link *sl = io_kiocb_to_cmd(req, struct io_link);
@@ -238,6 +358,21 @@ int io_symlinkat(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_linkat_prep - Prepare a linkat (hard link) operation
+ * @req: The io_kiocb request
+ * @sqe: Submission queue entry with hard link parameters
+ *
+ * Extracts old and new pathnames and corresponding file descriptors.
+ * Supports flag parsing (e.g., AT_SYMLINK_FOLLOW) via hardlink_flags.
+ * Allocates the required paths and sets flags for cleanup and async.
+ *
+ * Return:
+ * * 0 on success
+ * * -EINVAL for invalid SQE fields
+ * * -EBADF if fixed file is used
+ * * PTR_ERR on failure to retrieve path names
+ */
 int io_linkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_link *lnk = io_kiocb_to_cmd(req, struct io_link);
@@ -269,6 +404,17 @@ int io_linkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_linkat - Execute linkat syscall
+ * @req:          The io_kiocb request
+ * @issue_flags:  Flags indicating how the request is issued
+ *
+ * Performs the hard link creation via linkat syscall with arguments
+ * prepared earlier. Clears the cleanup flag after completion.
+ *
+ * Return:
+ * * IOU_OK after storing the syscall result
+ */
 int io_linkat(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_link *lnk = io_kiocb_to_cmd(req, struct io_link);
@@ -284,6 +430,12 @@ int io_linkat(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_link_cleanup - Cleanup resources used by linkat/symlinkat requests
+ * @req: The io_kiocb request to clean up
+ *
+ * Frees the memory allocated for old and new pathnames.
+ */
 void io_link_cleanup(struct io_kiocb *req)
 {
 	struct io_link *sl = io_kiocb_to_cmd(req, struct io_link);

@@ -1276,6 +1276,10 @@ int io_register_clone_buffers(struct io_ring_ctx *ctx, void __user *arg)
 	return ret;
 }
 
+/*
+ * Free the memory allocated for the iovec array in the given iou_vec.
+ * If no memory was allocated, nothing is done.
+ */
 void io_vec_free(struct iou_vec *iv)
 {
 	if (!iv->iovec)
@@ -1285,6 +1289,11 @@ void io_vec_free(struct iou_vec *iv)
 	iv->nr = 0;
 }
 
+/*
+ * Allocate or reallocate the iovec array within the given iou_vec to hold
+ * the specified number of entries. If reallocation is needed, the old array
+ * is freed first. Returns 0 on success, or -ENOMEM on failure.
+ */
 int io_vec_realloc(struct iou_vec *iv, unsigned nr_entries)
 {
 	gfp_t gfp = GFP_KERNEL | __GFP_NOWARN;
@@ -1300,6 +1309,12 @@ int io_vec_realloc(struct iou_vec *iv, unsigned nr_entries)
 	return 0;
 }
 
+/*
+ * Fill a bvec array based on user-provided iovec entries using the given
+ * io_mapped_ubuf. Validates that all buffers are within the registered
+ * region and populates the iov_iter accordingly.
+ * Returns 0 on success, or an error code on failure.
+ */
 static int io_vec_fill_bvec(int ddir, struct iov_iter *iter,
 				struct io_mapped_ubuf *imu,
 				struct iovec *iovec, unsigned nr_iovs,
@@ -1350,6 +1365,11 @@ static int io_vec_fill_bvec(int ddir, struct iov_iter *iter,
 	return 0;
 }
 
+/*
+ * Estimate the number of bvec segments required for a given iovec array.
+ * Uses the folio size shift from the io_mapped_ubuf to calculate segments.
+ * Returns the estimated number of bvecs.
+ */
 static int io_estimate_bvec_size(struct iovec *iov, unsigned nr_iovs,
 				 struct io_mapped_ubuf *imu)
 {
@@ -1362,6 +1382,13 @@ static int io_estimate_bvec_size(struct iovec *iov, unsigned nr_iovs,
 	return max_segs;
 }
 
+
+/*
+ * Populate the bvec array for a kernel-provided buffer. Iterates over
+ * the iovec entries and maps them to the corresponding bvecs from the
+ * io_mapped_ubuf. Populates the iov_iter for use in IO.
+ * Returns 0 on success.
+ */
 static int io_vec_fill_kern_bvec(int ddir, struct iov_iter *iter,
 				 struct io_mapped_ubuf *imu,
 				 struct iovec *iovec, unsigned nr_iovs,
@@ -1390,6 +1417,12 @@ static int io_vec_fill_kern_bvec(int ddir, struct iov_iter *iter,
 	return 0;
 }
 
+/*
+ * Helper for calculating the number of segments required for a single
+ * iovec entry in a kernel buffer context. Determines the range of bvecs
+ * covering the offset and length in the io_mapped_ubuf.
+ * Returns 0 on success or a negative error on failure.
+ */
 static int iov_kern_bvec_size(const struct iovec *iov,
 			      const struct io_mapped_ubuf *imu,
 			      unsigned int *nr_seg)
@@ -1413,6 +1446,12 @@ static int iov_kern_bvec_size(const struct iovec *iov,
 	return 0;
 }
 
+
+/*
+ * Compute the total number of bvec segments required for all iovecs
+ * in the kernel buffer context. Validates lengths and range alignment.
+ * Returns 0 on success, or an error code on failure.
+ */
 static int io_kern_bvec_size(struct iovec *iov, unsigned nr_iovs,
 			     struct io_mapped_ubuf *imu, unsigned *nr_segs)
 {
@@ -1438,6 +1477,13 @@ static int io_kern_bvec_size(struct iovec *iov, unsigned nr_iovs,
 	return 0;
 }
 
+/*
+ * Import a registered buffer vector (iovec array) into an iov_iter for
+ * submission. Determines whether the buffer is a kernel or user-mapped
+ * and fills the appropriate bvec structures. May reallocate the iou_vec
+ * if needed to accommodate additional bvecs.
+ * Returns 0 on success, or a negative error code on failure.
+ */
 int io_import_reg_vec(int ddir, struct iov_iter *iter,
 			struct io_kiocb *req, struct iou_vec *vec,
 			unsigned nr_iovs, unsigned issue_flags)
@@ -1498,6 +1544,13 @@ int io_import_reg_vec(int ddir, struct iov_iter *iter,
 	return io_vec_fill_bvec(ddir, iter, imu, iov, nr_iovs, vec);
 }
 
+/*
+ * Prepare a user-provided iovec array for use in registered buffer operations.
+ * If the current iou_vec is too small, it is reallocated. The user iovec
+ * is copied into kernel memory and validated. Marks the request as needing
+ * cleanup and buffer import.
+ * Returns 0 on success, or a negative error code on failure.
+ */
 int io_prep_reg_iovec(struct io_kiocb *req, struct iou_vec *iv,
 		      const struct iovec __user *uvec, size_t uvec_segs)
 {

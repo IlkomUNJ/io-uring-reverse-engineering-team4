@@ -22,6 +22,13 @@ struct io_xattr {
 	struct filename			*filename;
 };
 
+/*
+ * io_xattr_cleanup - Cleanup resources allocated for xattr operation.
+ * @req: I/O request associated with the xattr operation.
+ *
+ * Frees allocated kernel name and value, and drops filename reference
+ * if present.
+ */
 void io_xattr_cleanup(struct io_kiocb *req)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);
@@ -33,6 +40,13 @@ void io_xattr_cleanup(struct io_kiocb *req)
 	kvfree(ix->ctx.kvalue);
 }
 
+/*
+ * io_xattr_finish - Finalize xattr operation.
+ * @req: I/O request.
+ * @ret: Result code to set as operation result.
+ *
+ * Clears cleanup flag, performs cleanup, and sets result.
+ */
 static void io_xattr_finish(struct io_kiocb *req, int ret)
 {
 	req->flags &= ~REQ_F_NEED_CLEANUP;
@@ -41,6 +55,14 @@ static void io_xattr_finish(struct io_kiocb *req, int ret)
 	io_req_set_res(req, ret, 0);
 }
 
+/*
+ * __io_getxattr_prep - Common prep for xattr operations.
+ * @req: I/O request.
+ * @sqe: Submission queue entry.
+ *
+ * Allocates and imports xattr name, sets value pointer and size.
+ * Marks request for forced async and cleanup on completion.
+ */
 static int __io_getxattr_prep(struct io_kiocb *req,
 			      const struct io_uring_sqe *sqe)
 {
@@ -73,11 +95,26 @@ static int __io_getxattr_prep(struct io_kiocb *req,
 	return 0;
 }
 
+/*
+ * io_fgetxattr_prep - Prepare fgetxattr request.
+ * @req: I/O request.
+ * @sqe: Submission queue entry.
+ *
+ * Delegates to common xattr prep logic.
+ */
 int io_fgetxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	return __io_getxattr_prep(req, sqe);
 }
 
+/*
+ * io_getxattr_prep - Prepare getxattr request using path.
+ * @req: I/O request.
+ * @sqe: Submission queue entry.
+ *
+ * Performs standard xattr prep and resolves filename from userspace.
+ * Returns error if file is fixed (not supported).
+ */
 int io_getxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);
@@ -100,6 +137,14 @@ int io_getxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_fgetxattr - Execute fgetxattr operation.
+ * @req: I/O request.
+ * @issue_flags: Issue-time execution flags.
+ *
+ * Invokes file-based getxattr. Must not be used with non-blocking flag.
+ * Cleans up on completion.
+ */
 int io_fgetxattr(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);
@@ -112,6 +157,14 @@ int io_fgetxattr(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_getxattr - Execute getxattr operation using path.
+ * @req: I/O request.
+ * @issue_flags: Issue-time execution flags.
+ *
+ * Performs getxattr using path-based access. Caller must have resolved
+ * filename during prep. Cleans up and clears filename on completion.
+ */
 int io_getxattr(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);
@@ -125,6 +178,15 @@ int io_getxattr(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * __io_setxattr_prep - Common prep for setxattr operations.
+ * @req: I/O request.
+ * @sqe: Submission queue entry.
+ *
+ * Imports xattr name and value from userspace. Allocates kernel xattr
+ * name structure and copies userspace data. Marks request for cleanup
+ * and forced async execution.
+ */
 static int __io_setxattr_prep(struct io_kiocb *req,
 			const struct io_uring_sqe *sqe)
 {
@@ -154,6 +216,14 @@ static int __io_setxattr_prep(struct io_kiocb *req,
 	return 0;
 }
 
+/*
+ * io_setxattr_prep - Prepare setxattr operation using path.
+ * @req: I/O request.
+ * @sqe: Submission queue entry.
+ *
+ * Performs standard setxattr preparation and resolves path to filename.
+ * Fixed files are not supported for path-based operations.
+ */
 int io_setxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);
@@ -176,11 +246,26 @@ int io_setxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_fsetxattr_prep - Prepare fsetxattr operation.
+ * @req: I/O request.
+ * @sqe: Submission queue entry.
+ *
+ * Delegates to common setxattr prep logic. Used for file descriptor variant.
+ */
 int io_fsetxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	return __io_setxattr_prep(req, sqe);
 }
 
+/*
+ * io_fsetxattr - Execute fsetxattr operation using file descriptor.
+ * @req: I/O request.
+ * @issue_flags: Flags at execution time.
+ *
+ * Applies extended attribute to file via descriptor. Requires blocking context.
+ * Cleans up and completes request.
+ */
 int io_fsetxattr(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);
@@ -193,6 +278,14 @@ int io_fsetxattr(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_setxattr - Execute setxattr operation using path.
+ * @req: I/O request.
+ * @issue_flags: Flags at execution time.
+ *
+ * Sets extended attribute using path-based access. Must have prepared
+ * filename earlier. Cleans up and clears filename after use.
+ */
 int io_setxattr(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_xattr *ix = io_kiocb_to_cmd(req, struct io_xattr);

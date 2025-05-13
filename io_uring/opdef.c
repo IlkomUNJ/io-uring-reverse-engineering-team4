@@ -37,14 +37,34 @@
 #include "waitid.h"
 #include "futex.h"
 #include "truncate.h"
-#include "zcrx.h"
 
+/*
+ * io_no_issue - dummy issue handler for unsupported or invalid operations
+ * @req: io_kiocb representing the request
+ * @issue_flags: issue-time flags (unused)
+ *
+ * This function is used as a placeholder for operations that should not be
+ * issued. It triggers a one-time warning (via WARN_ON_ONCE) to help catch
+ * unexpected calls during development or debugging.
+ *
+ * Return: -ECANCELED always
+ */
 static int io_no_issue(struct io_kiocb *req, unsigned int issue_flags)
 {
 	WARN_ON_ONCE(1);
 	return -ECANCELED;
 }
 
+/*
+ * io_eopnotsupp_prep - dummy prep handler for unsupported operations
+ * @kiocb: io_kiocb representing the request
+ * @sqe: submission queue entry
+ *
+ * This function acts as a preparation handler for operations that are
+ * explicitly not supported. It may be used for stubbing or placeholder ops.
+ *
+ * Return: -EOPNOTSUPP always
+ */
 static __maybe_unused int io_eopnotsupp_prep(struct io_kiocb *kiocb,
 					     const struct io_uring_sqe *sqe)
 {
@@ -105,7 +125,7 @@ const struct io_issue_def io_issue_defs[] = {
 		.iopoll_queue		= 1,
 		.async_size		= sizeof(struct io_async_rw),
 		.prep			= io_prep_read_fixed,
-		.issue			= io_read_fixed,
+		.issue			= io_read,
 	},
 	[IORING_OP_WRITE_FIXED] = {
 		.needs_file		= 1,
@@ -119,7 +139,7 @@ const struct io_issue_def io_issue_defs[] = {
 		.iopoll_queue		= 1,
 		.async_size		= sizeof(struct io_async_rw),
 		.prep			= io_prep_write_fixed,
-		.issue			= io_write_fixed,
+		.issue			= io_write,
 	},
 	[IORING_OP_POLL_ADD] = {
 		.needs_file		= 1,
@@ -416,7 +436,7 @@ const struct io_issue_def io_issue_defs[] = {
 		.plug			= 1,
 		.iopoll			= 1,
 		.iopoll_queue		= 1,
-		.async_size		= sizeof(struct io_async_cmd),
+		.async_size		= sizeof(struct io_uring_cmd_data),
 		.prep			= io_uring_cmd_prep,
 		.issue			= io_uring_cmd,
 	},
@@ -516,58 +536,6 @@ const struct io_issue_def io_issue_defs[] = {
 #else
 		.prep			= io_eopnotsupp_prep,
 #endif
-	},
-	[IORING_OP_RECV_ZC] = {
-		.needs_file		= 1,
-		.unbound_nonreg_file	= 1,
-		.pollin			= 1,
-		.ioprio			= 1,
-#if defined(CONFIG_NET)
-		.prep			= io_recvzc_prep,
-		.issue			= io_recvzc,
-#else
-		.prep			= io_eopnotsupp_prep,
-#endif
-	},
-	[IORING_OP_EPOLL_WAIT] = {
-		.needs_file		= 1,
-		.audit_skip		= 1,
-		.pollin			= 1,
-#if defined(CONFIG_EPOLL)
-		.prep			= io_epoll_wait_prep,
-		.issue			= io_epoll_wait,
-#else
-		.prep			= io_eopnotsupp_prep,
-#endif
-	},
-	[IORING_OP_READV_FIXED] = {
-		.needs_file		= 1,
-		.unbound_nonreg_file	= 1,
-		.pollin			= 1,
-		.plug			= 1,
-		.audit_skip		= 1,
-		.ioprio			= 1,
-		.iopoll			= 1,
-		.iopoll_queue		= 1,
-		.vectored		= 1,
-		.async_size		= sizeof(struct io_async_rw),
-		.prep			= io_prep_readv_fixed,
-		.issue			= io_read,
-	},
-	[IORING_OP_WRITEV_FIXED] = {
-		.needs_file		= 1,
-		.hash_reg_file		= 1,
-		.unbound_nonreg_file	= 1,
-		.pollout		= 1,
-		.plug			= 1,
-		.audit_skip		= 1,
-		.ioprio			= 1,
-		.iopoll			= 1,
-		.iopoll_queue		= 1,
-		.vectored		= 1,
-		.async_size		= sizeof(struct io_async_rw),
-		.prep			= io_prep_writev_fixed,
-		.issue			= io_write,
 	},
 };
 
@@ -755,7 +723,6 @@ const struct io_cold_def io_cold_defs[] = {
 	},
 	[IORING_OP_URING_CMD] = {
 		.name			= "URING_CMD",
-		.cleanup		= io_uring_cmd_cleanup,
 	},
 	[IORING_OP_SEND_ZC] = {
 		.name			= "SEND_ZC",
@@ -799,24 +766,17 @@ const struct io_cold_def io_cold_defs[] = {
 	[IORING_OP_LISTEN] = {
 		.name			= "LISTEN",
 	},
-	[IORING_OP_RECV_ZC] = {
-		.name			= "RECV_ZC",
-	},
-	[IORING_OP_EPOLL_WAIT] = {
-		.name			= "EPOLL_WAIT",
-	},
-	[IORING_OP_READV_FIXED] = {
-		.name			= "READV_FIXED",
-		.cleanup		= io_readv_writev_cleanup,
-		.fail			= io_rw_fail,
-	},
-	[IORING_OP_WRITEV_FIXED] = {
-		.name			= "WRITEV_FIXED",
-		.cleanup		= io_readv_writev_cleanup,
-		.fail			= io_rw_fail,
-	},
 };
 
+/*
+ * io_uring_get_opcode - get the string name of an io_uring opcode
+ * @opcode: operation code to resolve
+ *
+ * Returns the string name of a given io_uring operation code if valid,
+ * otherwise returns "INVALID".
+ *
+ * Return: const char* representing the opcode name or "INVALID"
+ */
 const char *io_uring_get_opcode(u8 opcode)
 {
 	if (opcode < IORING_OP_LAST)
@@ -824,6 +784,15 @@ const char *io_uring_get_opcode(u8 opcode)
 	return "INVALID";
 }
 
+/*
+ * io_uring_op_supported - check if an io_uring opcode is supported
+ * @opcode: operation code to check
+ *
+ * Determines whether the given io_uring opcode is supported by verifying
+ * that its prep function is implemented and not equal to io_eopnotsupp_prep.
+ *
+ * Return: true if the opcode is supported, false otherwise
+ */
 bool io_uring_op_supported(u8 opcode)
 {
 	if (opcode < IORING_OP_LAST &&
@@ -832,6 +801,16 @@ bool io_uring_op_supported(u8 opcode)
 	return false;
 }
 
+/*
+ * io_uring_optable_init - validate and initialize the io_uring operation table
+ *
+ * Performs sanity checks to ensure that the io_uring operation tables
+ * (`io_cold_defs` and `io_issue_defs`) are correctly populated.
+ * Ensures that all supported opcodes have corresponding `prep` and `issue`
+ * functions defined, and that names are properly set.
+ *
+ * Called at init time to validate internal operation tables.
+ */
 void __init io_uring_optable_init(void)
 {
 	int i;
