@@ -20,6 +20,18 @@ struct io_statx {
 	struct statx __user		*buffer;
 };
 
+/*
+ * io_statx_prep - prepare a statx request
+ * @req: io_kiocb for the request
+ * @sqe: submission queue entry
+ *
+ * Validates and prepares a statx request by parsing arguments from
+ * the SQE. The statx path, flags, and mask are extracted and stored.
+ * The filename is resolved via getname_uflags() and stored in the
+ * request. Marks the request for cleanup and forces async execution.
+ *
+ * Returns 0 on success, or a negative error code on failure.
+ */
 int io_statx_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_statx *sx = io_kiocb_to_cmd(req, struct io_statx);
@@ -50,6 +62,17 @@ int io_statx_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_statx - issue a statx system call
+ * @req: io_kiocb for the request
+ * @issue_flags: flags for issuing request
+ *
+ * Executes the statx system call using previously prepared parameters.
+ * The result of the syscall is stored in the CQE. This function is
+ * expected to be called asynchronously (REQ_F_FORCE_ASYNC set).
+ *
+ * Returns IOU_OK unconditionally, as completion is always handled.
+ */
 int io_statx(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_statx *sx = io_kiocb_to_cmd(req, struct io_statx);
@@ -62,6 +85,13 @@ int io_statx(struct io_kiocb *req, unsigned int issue_flags)
 	return IOU_OK;
 }
 
+/*
+ * io_statx_cleanup - clean up resources after statx
+ * @req: io_kiocb for the request
+ *
+ * Releases resources allocated during statx preparation, such as
+ * the filename resolved from userspace.
+ */
 void io_statx_cleanup(struct io_kiocb *req)
 {
 	struct io_statx *sx = io_kiocb_to_cmd(req, struct io_statx);
