@@ -12,6 +12,7 @@
 #include "io_uring.h"
 #include "epoll.h"
 
+#if defined(CONFIG_EPOLL)
 struct io_epoll {
 	struct file			*file;
 	int				epfd;
@@ -20,12 +21,22 @@ struct io_epoll {
 	struct epoll_event		event;
 };
 
-struct io_epoll_wait {
-	struct file			*file;
-	int				maxevents;
-	struct epoll_event __user	*events;
-};
-
+/*
+ * io_epoll_ctl_prep - Prepare an epoll_ctl operation for submission
+ *
+ * @req: io_kiocb representing the request
+ * @sqe: submission queue entry from userspace
+ *
+ * Extracts and validates epoll_ctl parameters from the submission queue entry.
+ * Specifically:
+ *   - Validates that `buf_index` and `splice_fd_in` are not used (must be 0).
+ *   - Reads `epfd`, `op`, and `fd` fields for epoll_ctl from SQE.
+ *   - If the operation involves an epoll_event (e.g., EPOLL_CTL_ADD/MOD),
+ *     attempts to copy the event structure from userspace to kernel space.
+ *
+ * Returns 0 on success, -EINVAL on invalid flags, or -EFAULT if copying the
+ * event from userspace fails.
+ */
 int io_epoll_ctl_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_epoll *epoll = io_kiocb_to_cmd(req, struct io_epoll);
@@ -48,10 +59,15 @@ int io_epoll_ctl_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
-/**
-* prepare io_epoll reference, then start the eventpoll in non-blocking mode according
-* to the value passed on io_kiocdb
-*/
+/*
+ * io_epoll_ctl() - Handles the epoll_ctl() operation for io_uring.
+ * @ctx:      the current io_uring context
+ * @req:      the request structure representing this operation
+ * 
+ * This function executes an epoll_ctl command in the context of io_uring,
+ * allowing epoll operations to be asynchronously submitted.
+ */
+
 int io_epoll_ctl(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_epoll *ie = io_kiocb_to_cmd(req, struct io_epoll);
@@ -67,30 +83,4 @@ int io_epoll_ctl(struct io_kiocb *req, unsigned int issue_flags)
 	io_req_set_res(req, ret, 0);
 	return IOU_OK;
 }
-
-int io_epoll_wait_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
-{
-	struct io_epoll_wait *iew = io_kiocb_to_cmd(req, struct io_epoll_wait);
-
-	if (sqe->off || sqe->rw_flags || sqe->buf_index || sqe->splice_fd_in)
-		return -EINVAL;
-
-	iew->maxevents = READ_ONCE(sqe->len);
-	iew->events = u64_to_user_ptr(READ_ONCE(sqe->addr));
-	return 0;
-}
-
-int io_epoll_wait(struct io_kiocb *req, unsigned int issue_flags)
-{
-	struct io_epoll_wait *iew = io_kiocb_to_cmd(req, struct io_epoll_wait);
-	int ret;
-
-	ret = epoll_sendevents(req->file, iew->events, iew->maxevents);
-	if (ret == 0)
-		return -EAGAIN;
-	if (ret < 0)
-		req_set_fail(req);
-
-	io_req_set_res(req, ret, 0);
-	return IOU_OK;
-}
+#endif
