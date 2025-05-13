@@ -1136,5 +1136,476 @@ alloc_cache.h | /include/linux/kasan.h | kasan_mempool_unpoison_object | 1
 | | alloc_cache.h | io_cache_alloc_new | 1
 | | alloc_cache.h | io_alloc_cache_put | 1
 | | linux/mm/slub.c | kfree | 1
+| advise.h      | advise.c                             | io_fadvise                    | 1          |
+|               |                                      | io_fadvise_prep              | 1          |
+|               |                                      | io_madvise                   | 1          |
+|               |                                      | io_madvise_prep              | 1          |
+| alloc_cache.h | advise.c        | defined                        | 1          |
+|               | alloc_cache.c   | io_alloc_cache_free            | 1          |
+|               |                 | io_alloc_cache_get             | 2          |
+|               |                 | io_alloc_cache_init            | 1          |
+|               | alloc_cache.h   | io_alloc_cache_kasan           | 1          |
+|               |                 | io_alloc_cache_put             | 1          |
+|               |                 | io_cache_alloc                 | 1          |
+|               | alloc_cache.c   | io_cache_alloc_new             | 2          |
+|               | alloc_cache.h   | IS_ENABLED                     | 1          |
+|               |                 | kasan_mempool_poison_object    | 1          |
+|               |                 | kasan_mempool_unpoison_object | 1          |
+|               |                 | kfree                          | 1          |
+|               | alloc_cache.c   | memset                         | 1          |
+|               |                 | void                           | 1          |
+| cancel.h      | cancel.c        | io_async_cancel                  | 1          |
+|               |                 | io_async_cancel_prep             | 1          |
+|               |                 | io_cancel_match_sequence         | 1          |
+|               |                 | io_cancel_req_match              | 1          |
+|               |                 | io_sync_cancel                   | 1          |
+|               |                 | io_try_cancel                    | 1          |
+| epoll.h       | advise.c        | defined                          | 1          |
+|               | epoll.c         | io_epoll_ctl                     | 1          |
+|               |                 | io_epoll_ctl_prep                | 1          |
+| eventfd.h     | eventfd.c       | io_eventfd_flush_signal          | 1          |
+|               |                 | io_eventfd_register              | 1          |
+|               |                 | io_eventfd_signal                | 1          |
+|               |                 | io_eventfd_unregister            | 1          |
+| fdinfo.h      | fdinfo.c        | io_uring_show_fdinfo             | 1          |
+| filetable.h   | filetable.h     | __clear_bit                      | 1          |
+|               | filetable.c     | io_alloc_file_tables             | 1          |
+|               |                 | io_file_bitmap_clear             | 1          |
+|               |                 | io_file_bitmap_set               | 1          |
+|               | filetable.h     | io_file_get_flags                | 2          |
+|               | filetable.c     | io_file_table_set_alloc_range    | 1          |
+|               |                 | __io_fixed_fd_install            | 1          |
+|               |                 | io_fixed_fd_install              | 1          |
+|               |                 | io_fixed_fd_remove               | 1          |
+|               |                 | io_fixed_file_set                | 1          |
+|               |                 | io_free_file_tables              | 1          |
+|               |                 | io_register_file_alloc_range     | 1          |
+|               | cancel.c        | io_slot_file                     | 1          |
+|               | filetable.h     | io_slot_flags                    | 1          |
+|               |                 | __set_bit                        | 1          |
+|               |                 | test_bit                         | 2          |
+|               | advise.c        | WARN_ON_ONCE                     | 2          |
+| fs.h         | fs.h          | io_linkat                       | 1          |
+|              | fs.c          | io_linkat_prep                  | 1          |
+|              |               | io_link_cleanup                 | 1          |
+|              |               | io_mkdirat                      | 1          |
+|              |               | io_mkdirat_cleanup              | 1          |
+|              |               | io_mkdirat_prep                 | 1          |
+|              |               | io_renameat                     | 1          |
+|              |               | io_renameat_cleanup             | 1          |
+|              |               | io_renameat_prep                | 1          |
+|              |               | io_symlinkat                    | 1          |
+|              |               | io_symlinkat_prep               | 1          |
+|              |               | io_unlinkat                     | 1          |
+|              |               | io_unlinkat_cleanup             | 1          |
+|              |               | io_unlinkat_prep                | 1          |
+| futex.h      | advise.c      | defined                         | 1          |
+|              | futex.c       | io_futex_cache_free             | 2          |
+|              |               | io_futex_cache_init             | 2          |
+|              | cancel.c      | io_futex_cancel                 | 2          |
+|              | futex.c       | io_futex_prep                   | 1          |
+|              |               | io_futex_remove_all             | 2          |
+|              |               | io_futexv_prep                  | 1          |
+|              |               | io_futexv_wait                  | 1          |
+|              |               | io_futex_wait                   | 1          |
+|              |               | io_futex_wake                   | 1          |
+| io_uring.h   | io-wq.c       | atomic_read                     | 1          |
+|              | io_uring.h    | clear_notify_signal             | 1          |
+|              | cancel.c      | container_of                    | 1          |
+|              | advise.c      | defined                         | 1          |
+|              | io_uring.h    | file_can_poll                   | 1          |
+|              | cancel.c      | fput                            | 1          |
+|              | io-wq.c       | get_signal                      | 1          |
+|              | io-wq.h       | in_task                         | 1          |
+|              | io_uring.c    | io_activate_pollwq              | 1          |
+|              |               | io_add_aux_cqe                  | 1          |
+|              | io_uring.h    | io_alloc_async_data             | 1          |
+|              | io_uring.c    | io_alloc_req                    | 1          |
+|              |               | __io_alloc_req_refill           | 2          |
+|              |               | io_allowed_defer_tw_run         | 1          |
+|              |               | io_allowed_run_tw               | 1          |
+|              | alloc_cache.h | io_cache_alloc                  | 1          |
+|              | io_uring.c    | io_commit_cqring                | 1          |
+|              |               | __io_commit_cqring_flush        | 2          |
+|              |               | io_commit_cqring_flush          | 1          |
+|              |               | io_cqe_cache_refill             | 2          |
+|              |               | io_cqring_wake                  | 1          |
+|              |               | io_do_iopoll                    | 1          |
+|              |               | io_extract_req                  | 2          |
+|              |               | io_file_can_poll                | 1          |
+|              | cancel.c      | io_file_get_fixed               | 1          |
+|              |               | io_file_get_normal              | 1          |
+|              | io_uring.c    | io_fill_cqe_req                 | 1          |
+|              |               | io_for_each_link                | 1          |
+|              |               | io_free_req                     | 1          |
+|              |               | io_get_cqe                      | 2          |
+|              |               | io_get_cqe_overflow             | 2          |
+|              |               | io_get_task_refs                | 1          |
+|              |               | io_get_time                     | 1          |
+|              |               | io_handle_tw_list               | 1          |
+|              |               | io_has_work                     | 1          |
+|              |               | io_local_work_pending           | 3          |
+|              | io_uring.h    | io_lockdep_assert_cq_locked     | 2          |
+|              | futex.c       | io_match_task_safe              | 1          |
+|              | io_uring.c    | io_poll_issue                   | 1          |
+|              |               | io_poll_wq_wake                 | 1          |
+|              |               | io_post_aux_cqe                 | 1          |
+|              |               | io_put_file                     | 1          |
+|              |               | io_queue_next                   | 1          |
+|              |               | io_req_cache_empty              | 2          |
+|              |               | io_req_complete_defer           | 1          |
+|              |               | io_req_defer_failed             | 1          |
+|              |               | io_req_post_cqe                 | 1          |
+|              |               | io_req_queue_iowq               | 1          |
+|              | io_uring.h    | io_req_queue_tw_complete        | 1          |
+|              | advise.c      | io_req_set_res                  | 2          |
+|              | futex.c       | io_req_task_complete            | 1          |
+|              | io_uring.c    | io_req_task_queue_fail          | 1          |
+|              |               | io_req_task_submit              | 1          |
+|              |               | __io_req_task_work_add          | 2          |
+|              | futex.c       | io_req_task_work_add            | 2          |
+|              | io_uring.c    | io_req_task_work_add_remote     | 1          |
+|              |               | io_ring_add_registered_file     | 1          |
+|              |               | IORING_MAX_CQ_ENTRIES           | 1          |
+|              | cancel.c      | io_ring_submit_lock             | 1          |
+|              |               | io_ring_submit_unlock           | 1          |
+|              | io-wq.c       | io_run_task_work                | 1          |
+|              | cancel.c      | io_run_task_work_sig            | 1          |
+|              | io_uring.c    | io_should_terminate_tw          | 1          |
+|              |               | io_should_wake                  | 2          |
+|              |               | io_sqring_entries               | 1          |
+|              |               | io_sqring_full                  | 1          |
+|              |               | __io_submit_flush_completions   | 2          |
+|              |               | io_submit_flush_completions     | 1          |
+|              |               | io_submit_sqes                  | 1          |
+|              |               | io_task_refs_refill             | 2          |
+|              |               | io_task_work_pending            | 1          |
+|              | futex.c       | io_tw_lock                      | 1          |
+|              | io_uring.h    | io_uring_alloc_async_data       | 1          |
+|              |               | io_uring_alloc_task_context     | 1          |
+|              | io_uring.c    | io_uring_cancel_generic         | 1          |
+|              |               | io_uring_fill_params            | 1          |
+|              |               | io_wq_free_work                 | 1          |
+|              |               | io_wq_submit_work               | 1          |
+|              | alloc_cache.c | kmalloc                         | 1          |
+|              | io_uring.h    | ktime_get                       | 1          |
+|              |               | ktime_get_with_offset           | 1          |
+|              | io-wq.c       | likely                          | 2          |
+|              | io_uring.c    | llist_empty                     | 2          |
+|              |               | lockdep_assert                  | 2          |
+|              | futex.c       | lockdep_assert_held             | 7          |
+|              | io_uring.c    | memcpy                          | 2          |
+|              | alloc_cache.c | memset                          | 1          |
+|              | fdinfo.c      | min                             | 1          |
+| io_uring.h     | cancel.c      | __must_hold                        | 1         |
+| io_uring.h     | cancel.c      | mutex_lock                         | 1         |
+| io_uring.h     | cancel.c      | mutex_unlock                       | 1         |
+| io_uring.h     | io_uring.h    | percpu_ref_is_dying                | 1         |
+| io_uring.h     | io_uring.h    | poll_to_key                        | 2         |
+| io_uring.h     | advise.c      | READ_ONCE                          | 3         |
+| io_uring.h     | io_uring.h    | req_has_async_data                 | 1         |
+| io_uring.h     | advise.c      | req_set_fail                       | 1         |
+| io_uring.h     | io_uring.h    | resume_user_mode_work              | 1         |
+| io_uring.h     | io_uring.c    | rings_size                         | 1         |
+| io_uring.h     | futex.c       | __set_current_state                | 3         |
+| io_uring.h     | io_uring.c    | smp_load_acquire                   | 1         |
+| io_uring.h     | io_uring.c    | smp_store_release                  | 1         |
+| io_uring.h     | futex.c       | submission                         | 1         |
+| io_uring.h     | fdinfo.c      | task_work_pending                  | 2         |
+| io_uring.h     | io_uring.h    | task_work_run                      | 1         |
+| io_uring.h     | io_uring.c    | tctx_task_work                     | 1         |
+| io_uring.h     | io_uring.c    | tctx_task_work_run                 | 2         |
+| io_uring.h     | filetable.h   | test_bit                           | 1         |
+| io_uring.h     | io_uring.h    | test_thread_flag                   | 2         |
+| io_uring.h     | io_uring.c    | trace_io_uring_complete            | 1         |
+| io_uring.h     | io_uring.h    | trace_io_uring_complete_enabled    | 1         |
+| io_uring.h     | cancel.c      | unlikely                           | 8         |
+| io_uring.h     | io_uring.h    | uring_sqe_size                     | 1         |
+| io_uring.h     | io_uring.h    | waits                              | 1         |
+| io_uring.h     | io_uring.h    | __wake_up                          | 2         |
+| io_uring.h     | advise.c      | WARN_ON_ONCE                       | 1         |
+| io_uring.h     | io-wq.c       | wq_has_sleeper                     | 2         |
+| io_uring.h     | io-wq.c       | wq_list_add_tail                   | 1         |
+| io_uring.h     | io-wq.c       | wq_list_empty                      | 1         |
+| io_uring.h     | io_uring.h    | wq_stack_extract                   | 1         |
+| io-wq.h        | io-wq.c       | atomic_read                        | 1         |
+| io-wq.h        | advise.c      | bool                               | 1         |
+| io-wq.h        | advise.c      | defined                            | 1         |
+| io-wq.h        | io-wq.h       | in_task                            | 1         |
+| io-wq.h        | cancel.c      | io_wq_cancel_cb                    | 1         |
+| io-wq.h        | io-wq.c       | io_wq_cpu_affinity                 | 1         |
+| io-wq.h        | io-wq.c       | io_wq_create                       | 1         |
+| io-wq.h        | cancel.c      | io_wq_current_is_worker           | 1         |
+| io-wq.h        | io-wq.c       | io_wq_enqueue                      | 1         |
+| io-wq.h        | io-wq.c       | io_wq_exit_start                   | 1         |
+| io-wq.h        | io-wq.c       | io_wq_hash_work                    | 1         |
+| io-wq.h        | io-wq.c       | io_wq_is_hashed                    | 1         |
+| io-wq.h        | io-wq.c       | io_wq_max_workers                  | 1         |
+| io-wq.h        | io-wq.c       | io_wq_put_and_exit                 | 1         |
+| io-wq.h        | io-wq.c       | io_wq_put_hash                     | 1         |
+| io-wq.h        | io-wq.c       | io_wq_worker_running               | 2         |
+| io-wq.h        | io-wq.c       | io_wq_worker_sleeping              | 2         |
+| io-wq.h        | io-wq.c       | io_wq_worker_stopped               | 1         |
+| io-wq.h          | alloc_cache.h      | kfree                            | 1      |
+| io-wq.h          | eventfd.c          | refcount_dec_and_test            | 1      |
+| io-wq.h          | alloc_cache.c      | void                             | 1      |
+| kbuf.h           | kbuf.c             | io_buffer_select                 | 1      |
+| kbuf.h           | kbuf.c             | io_buffers_peek                  | 1      |
+| kbuf.h           | kbuf.c             | io_buffers_select                | 1      |
+| kbuf.h           | io_uring.c         | io_destroy_buffers               | 1      |
+| kbuf.h           | kbuf.h             | io_do_buffer_select              | 1      |
+| kbuf.h           | kbuf.c             | io_kbuf_commit                   | 2      |
+| kbuf.h           | io_uring.c         | io_kbuf_drop                     | 1      |
+| kbuf.h           | io_uring.c         | io_kbuf_recycle                  | 1      |
+| kbuf.h           | kbuf.c             | io_kbuf_recycle_legacy           | 2      |
+| kbuf.h           | kbuf.h             | io_kbuf_recycle_ring             | 2      |
+| kbuf.h           | kbuf.c             | io_pbuf_get_region               | 1      |
+| kbuf.h           | kbuf.c             | io_provide_buffers               | 1      |
+| kbuf.h           | kbuf.c             | io_provide_buffers_prep          | 1      |
+| kbuf.h           | kbuf.c             | __io_put_kbuf                    | 2      |
+| kbuf.h           | io_uring.c         | io_put_kbuf                      | 1      |
+| kbuf.h           | kbuf.c             | __io_put_kbuf_list               | 2      |
+| kbuf.h           | kbuf.h             | __io_put_kbuf_ring               | 3      |
+| kbuf.h           | kbuf.h             | __io_put_kbufs                   | 3      |
+| kbuf.h           | kbuf.h             | io_put_kbufs                     | 1      |
+| kbuf.h           | kbuf.c             | io_register_pbuf_ring            | 1      |
+| kbuf.h           | kbuf.c             | io_register_pbuf_status          | 1      |
+| kbuf.h           | kbuf.c             | io_remove_buffers                | 1      |
+| kbuf.h           | kbuf.c             | io_remove_buffers_prep           | 1      |
+| kbuf.h           | kbuf.c             | io_ring_head_to_buf              | 2      |
+| kbuf.h           | kbuf.c             | io_unregister_pbuf_ring          | 1      |
+| kbuf.h           | kbuf.c             | list_add                         | 1      |
+| kbuf.h           | futex.c            | lockdep_assert_held              | 1      |
+| kbuf.h           | cancel.c           | unlikely                         | 2      |
+| kbuf.h           | advise.c           | WARN_ON_ONCE                     | 1      |
+| memmap.h         | io_uring.c         | io_create_region                 | 1      |
+| memmap.h         | kbuf.c             | io_create_region_mmap_safe       | 1      |
+| memmap.h         | io_uring.c         | io_free_region                   | 1      |
+| memmap.h         | memmap.c           | io_pin_pages                     | 1      |
+| memmap.h         | io_uring.c         | io_region_get_ptr                | 1      |
+| memmap.h         | memmap.c           | io_region_is_set                 | 1      |
+| memmap.h         | io_uring.c         | io_uring_get_unmapped_area       | 1      |
+| memmap.h         | io_uring.c         | io_uring_mmap                    | 1      |
+| memmap.h         | io_uring.c         | io_uring_nommu_mmap_capabilities | 1      |
+| msg_ring.h       | msg_ring.c         | io_msg_ring                      | 1      |
+| msg_ring.h       | msg_ring.c         | io_msg_ring_cleanup              | 1      |
+| msg_ring.h       | msg_ring.c         | io_msg_ring_prep                 | 1      |
+| msg_ring.h       | msg_ring.c         | io_uring_sync_msg_ring           | 1      |
+| napi.h           | napi.h             | io_napi                          | 3      |
+| napi.h           | napi.h             | io_napi_add                      | 3      |
+| napi.h           | napi.c             | __io_napi_add_id                 | 2      |
+| napi.h           | napi.c             | __io_napi_busy_loop              | 2      |
+| napi.h           | io_uring.c         | io_napi_busy_loop                | 2      |
+| napi.h           | io_uring.c         | io_napi_free                     | 2      |
+| napi.h           | io_uring.c         | io_napi_init                     | 2      |
+| napi.h           | napi.c             | io_napi_sqpoll_busy_poll         | 2      |
+| napi.h           | napi.c             | io_register_napi                 | 2      |
+| napi.h           | napi.c             | io_unregister_napi               | 2      |
+| napi.h           | io-wq.c            | list_empty                       | 1      |
+| napi.h           | advise.c           | READ_ONCE                        | 2      |
+| napi.h           | napi.h             | sock_from_file                   | 1      |
+| net.h            | advise.c           | defined                          | 2      |
+| net.h            | net.c              | io_accept                        | 1      |
+| net.h            | net.c              | io_accept_prep                   | 1      |
+| net.h            | net.c              | io_bind                          | 1      |
+| net.h            | net.c              | io_bind_prep                     | 1      |
+| net.h            | net.c              | io_connect                       | 1      |
+| net.h            | net.c              | io_connect_prep                  | 1      |
+| net.h            | net.c              | io_listen                        | 1      |
+| net.h            | net.c              | io_listen_prep                   | 1      |
+| net.h            | io_uring.c         | io_netmsg_cache_free             | 2      |
+| net.h            | net.c              | io_recv                          | 1      |
+| net.h            | net.c              | io_recvmsg                       | 1      |
+| net.h            | net.c              | io_recvmsg_prep                  | 1      |
+| net.h            | net.c              | io_send                          | 1      |
+| net.h            | net.c              | io_sendmsg                       | 1      |
+| net.h            | net.c              | io_sendmsg_prep                  | 1      |
+| net.h            | net.c              | io_sendmsg_recvmsg_cleanup       | 1      |
+| net.h            | net.c              | io_sendmsg_zc                    | 1      |
+| net.h            | net.c              | io_sendrecv_fail                 | 1      |
+| net.h            | net.c              | io_send_zc                       | 1      |
+| net.h            | net.c              | io_send_zc_cleanup               | 1      |
+| net.h            | net.c              | io_send_zc_prep                  | 1      |
+| net.h            | net.c              | io_shutdown                      | 1      |
+| net.h            | net.c              | io_shutdown_prep                 | 1      |
+| net.h            | net.c              | io_socket                        | 1      |
+| net.h            | net.c              | io_socket_prep                   | 1      |
+| net.h            | net.h              | struct_group                     | 2      |
+| nop.h            | nop.c              | io_nop                           | 1      |
+| nop.h            | nop.c              | io_nop_prep                      | 1      |
+| notif.h          | memmap.c           | __io_account_mem                 | 1      |
+| notif.h          | net.c              | io_alloc_notif                   | 1      |
+| notif.h          | advise.c           | io_kiocb_to_cmd                  | 1      |
+| notif.h          | net.c              | io_notif_account_mem             | 1      |
+| notif.h          | net.c              | io_notif_flush                   | 1      |
+| notif.h          | net.c              | io_notif_to_data                 | 3      |
+| notif.h          | notif.c            | IO_NOTIF_UBUF_FLAGS              | 1      |
+| notif.h          | notif.c            | io_tx_ubuf_complete              | 2      |
+| notif.h          | cancel.c           | __must_hold                      | 1      |
+| opdef.h         | advise.c         | int                                       | 2      |
+| opdef.h         | opdef.c          | io_uring_op_supported                     | 1      |
+| opdef.h         | io_uring.c       | io_uring_optable_init                     | 1      |
+| opdef.h         | alloc_cache.c    | void                                      | 2      |
+| openclose.h     | opdef.c          | io_close                                  | 1      |
+| openclose.h     | openclose.c      | __io_close_fixed                          | 1      |
+| openclose.h     | opdef.c          | io_close_prep                             | 1      |
+| openclose.h     | opdef.c          | io_install_fixed_fd                       | 1      |
+| openclose.h     | opdef.c          | io_install_fixed_fd_prep                  | 1      |
+| openclose.h     | opdef.c          | io_openat                                 | 1      |
+| openclose.h     | opdef.c          | io_openat2                                | 1      |
+| openclose.h     | opdef.c          | io_openat2_prep                           | 1      |
+| openclose.h     | opdef.c          | io_openat_prep                            | 1      |
+| openclose.h     | opdef.c          | io_open_cleanup                           | 1      |
+| poll.h          | io-wq.c          | atomic_inc                                | 1      |
+| poll.h          | io_uring.c       | io_arm_poll_handler                       | 1      |
+| poll.h          | opdef.c          | io_poll_add                               | 1      |
+| poll.h          | opdef.c          | io_poll_add_prep                          | 1      |
+| poll.h          | cancel.c         | io_poll_cancel                            | 1      |
+| poll.h          | poll.h           | io_poll_multishot_retry                   | 1      |
+| poll.h          | opdef.c          | io_poll_remove                            | 1      |
+| poll.h          | io_uring.c       | io_poll_remove_all                        | 1      |
+| poll.h          | opdef.c          | io_poll_remove_prep                       | 1      |
+| poll.h          | io_uring.c       | io_poll_task_func                         | 1      |
+| refs.h          | io-wq.c          | atomic_dec                                | 1      |
+| refs.h          | io-wq.c          | atomic_dec_and_test                       | 1      |
+| refs.h          | io-wq.c          | atomic_inc                                | 1      |
+| refs.h          | refs.h           | atomic_inc_not_zero                       | 1      |
+| refs.h          | io-wq.c          | atomic_read                               | 1      |
+| refs.h          | eventfd.c        | atomic_set                                | 1      |
+| refs.h          | io_uring.c       | __io_req_set_refcount                     | 2      |
+| refs.h          | io_uring.c       | io_req_set_refcount                       | 1      |
+| refs.h          | io-wq.c          | likely                                    | 1      |
+| refs.h          | io_uring.c       | req_ref_get                               | 1      |
+| refs.h          | refs.h           | req_ref_inc_not_zero                      | 1      |
+| refs.h          | io_uring.c       | req_ref_put                               | 1      |
+| refs.h          | io_uring.c       | req_ref_put_and_test                      | 1      |
+| refs.h          | refs.h           | req_ref_zero_or_close_to_overflow         | 4      |
+| refs.h          | advise.c         | WARN_ON_ONCE                              | 6      |
+| register.h      | eventfd.c        | io_eventfd_unregister                     | 1      |
+| register.h      | io_uring.c       | io_unregister_personality                 | 1      |
+| register.h      | register.c       | io_uring_register_get_file                | 1      |
+| rsrc.h          | io_uring.c       | array_index_nospec                        | 1      |
+| rsrc.h          | rsrc.h           | atomic_long_sub                           | 1      |
+| rsrc.h          | rsrc.h           | __counted_by                              | 1      |
+| rsrc.h          | memmap.c         | __io_account_mem                          | 1      |
+| rsrc.h          | memmap.c         | io_check_coalesce_buffer                  | 1      |
+| rsrc.h          | opdef.c          | io_files_update                           | 1      |
+| rsrc.h          | opdef.c          | io_files_update_prep                      | 1      |
+| rsrc.h          | rsrc.c           | io_free_rsrc_node                         | 2      |
+| rsrc.h          | net.c            | io_import_fixed                           | 1      |
+| rsrc.h          | rsrc.c           | io_put_rsrc_node                          | 4      |
+| rsrc.h          | register.c       | io_register_clone_buffers                 | 1      |
+| rsrc.h          | register.c       | io_register_files_update                  | 1      |
+| rsrc.h          | register.c       | io_register_rsrc                          | 1      |
+| rsrc.h          | register.c       | io_register_rsrc_update                   | 1      |
+| rsrc.h          | net.c            | io_req_assign_buf_node                    | 1      |
+| rsrc.h          | io_uring.c       | io_req_assign_rsrc_node                   | 2      |
+| rsrc.h          | io_uring.c       | io_req_put_rsrc_nodes                     | 1      |
+| rsrc.h          | filetable.c      | io_reset_rsrc_node                        | 1      |
+| rsrc.h          | filetable.c      | io_rsrc_data_alloc                        | 1      |
+| rsrc.h          | filetable.c      | io_rsrc_data_free                         | 1      |
+| rsrc.h          | filetable.c      | io_rsrc_node_alloc                        | 1      |
+| rsrc.h          | cancel.c         | io_rsrc_node_lookup                       | 1      |
+| rsrc.h          | register.c       | io_sqe_buffers_register                   | 1      |
+| rsrc.h          | io_uring.c       | io_sqe_buffers_unregister                 | 1      |
+| rsrc.h          | register.c       | io_sqe_files_register                     | 1      |
+| rsrc.h          | io_uring.c       | io_sqe_files_unregister                   | 1      |
+| rsrc.h          | memmap.c         | __io_unaccount_mem                        | 1      |
+| rsrc.h          | futex.c          | lockdep_assert_held                       | 1      |
+| rw.h            | opdef.c          | io_prep_read                              | 1      |
+| rw.h            | opdef.c          | io_prep_read_fixed                        | 1      |
+| rw.h            | opdef.c          | io_prep_readv                             | 1      |
+| rw.h            | opdef.c          | io_prep_write                             | 1      |
+| rw.h            | opdef.c          | io_prep_write_fixed                       | 1      |
+| rw.h            | opdef.c          | io_prep_writev                            | 1      |
+| rw.h            | opdef.c          | io_read                                   | 1      |
+| rw.h            | opdef.c          | io_read_mshot                             | 1      |
+| rw.h            | opdef.c          | io_read_mshot_prep                        | 1      |
+| rw.h            | opdef.c          | io_readv_writev_cleanup                   | 1      |
+| rw.h            | io_uring.c       | io_req_rw_complete                        | 1      |
+| rw.h            | io_uring.c       | io_rw_cache_free                          | 1      |
+| rw.h            | opdef.c          | io_rw_fail                                | 1      |
+| rw.h            | opdef.c          | io_write                                  | 1      |
+| rw.h            | net.h            | struct_group                              | 1      |
+| slist.h         | cancel.c         | container_of                              | 1      |
+| slist.h         | io-wq.c          | INIT_WQ_LIST                              | 2      |
+| slist.h         | advise.c         | READ_ONCE                                 | 1      |
+| slist.h         | io-wq.c          | wq_list_add_after                         | 1      |
+| slist.h         | io_uring.c       | wq_list_add_head                          | 1      |
+| slist.h         | io-wq.c          | wq_list_add_tail                          | 1      |
+| slist.h         | io-wq.c          | wq_list_cut                               | 2      |
+| slist.h         | io-wq.c          | wq_list_del                               | 1      |
+| slist.h         | io-wq.c          | wq_list_empty                             | 2      |
+| slist.h         | io_uring.c       | __wq_list_for_each                        | 1      |
+| slist.h         | io-wq.c          | wq_list_for_each                          | 1      |
+| slist.h         | rw.c             | wq_list_for_each_resume                   | 1      |
+| slist.h         | slist.h          | __wq_list_splice                          | 2      |
+| slist.h         | slist.h          | wq_list_splice                            | 1      |
+| slist.h         | io-wq.c          | wq_next_work                              | 1      |
+| slist.h         | io_uring.c       | wq_stack_add_head                         | 1      |
+| slist.h         | io_uring.h       | wq_stack_extract                          | 1      |
+| slist.h         | io_uring.c       | WRITE_ONCE                                | 3      |
+| splice.h        | opdef.c          | io_splice                                 | 1      |
+| splice.h        | opdef.c          | io_splice_cleanup                         | 1      |
+| splice.h        | opdef.c          | io_splice_prep                            | 1      |
+| splice.h        | opdef.c          | io_tee                                    | 1      |
+| splice.h        | opdef.c          | io_tee_prep                               | 1      |
+| sqpoll.h      | register.c    | io_put_sq_data                        | 1      |
+| sqpoll.h      | io_uring.c    | io_sq_offload_create                  | 1      |
+| sqpoll.h      | io_uring.c    | io_sqpoll_wait_sq                     | 1      |
+| sqpoll.h      | register.c    | io_sqpoll_wq_cpu_affinity             | 1      |
+| sqpoll.h      | io_uring.c    | io_sq_thread_finish                   | 1      |
+| sqpoll.h      | io_uring.c    | io_sq_thread_park                     | 1      |
+| sqpoll.h      | sqpoll.c      | io_sq_thread_stop                     | 1      |
+| sqpoll.h      | io_uring.c    | io_sq_thread_unpark                   | 1      |
+| statx.h       | opdef.c       | io_statx                              | 1      |
+| statx.h       | opdef.c       | io_statx_cleanup                      | 1      |
+| statx.h       | opdef.c       | io_statx_prep                         | 1      |
+| sync.h        | opdef.c       | io_fallocate                          | 1      |
+| sync.h        | opdef.c       | io_fallocate_prep                     | 1      |
+| sync.h        | opdef.c       | io_fsync                              | 1      |
+| sync.h        | opdef.c       | io_fsync_prep                         | 1      |
+| sync.h        | opdef.c       | io_sfr_prep                           | 1      |
+| sync.h        | opdef.c       | io_sync_file_range                    | 1      |
+| tctx.h        | register.c    | io_ringfd_register                    | 1      |
+| tctx.h        | register.c    | io_ringfd_unregister                  | 1      |
+| tctx.h        | io_uring.c    | __io_uring_add_tctx_node              | 1      |
+| tctx.h        | io_uring.c    | io_uring_add_tctx_node                | 1      |
+| tctx.h        | tctx.c        | __io_uring_add_tctx_node_from_submit | 2      |
+| tctx.h        | io_uring.h    | io_uring_alloc_task_context           | 1      |
+| tctx.h        | io_uring.c    | io_uring_clean_tctx                   | 1      |
+| tctx.h        | io_uring.c    | io_uring_del_tctx_node                | 1      |
+| tctx.h        | io_uring.c    | io_uring_unreg_ringfd                 | 1      |
+| tctx.h        | io-wq.c       | likely                                | 1      |
+| timeout.h     | timeout.c     | __io_disarm_linked_timeout            | 2      |
+| timeout.h     | timeout.c     | io_disarm_linked_timeout              | 1      |
+| timeout.h     | io_uring.c    | io_disarm_next                        | 1      |
+| timeout.h     | io_uring.c    | io_flush_timeouts                     | 1      |
+| timeout.h     | io_uring.c    | io_kill_timeouts                      | 1      |
+| timeout.h     | opdef.c       | io_link_timeout_prep                  | 1      |
+| timeout.h     | io_uring.c    | io_queue_linked_timeout               | 1      |
+| timeout.h     | opdef.c       | io_timeout                            | 1      |
+| timeout.h     | cancel.c      | io_timeout_cancel                     | 1      |
+| timeout.h     | opdef.c       | io_timeout_prep                       | 1      |
+| timeout.h     | opdef.c       | io_timeout_remove                     | 1      |
+| timeout.h     | opdef.c       | io_timeout_remove_prep                | 1      |
+| truncate.h    | opdef.c       | io_ftruncate                          | 1      |
+| truncate.h    | opdef.c       | io_ftruncate_prep                     | 1      |
+| uring_cmd.h   | opdef.c       | io_uring_cmd                          | 1      |
+| uring_cmd.h   | opdef.c       | io_uring_cmd_prep                     | 1      |
+| uring_cmd.h   | io_uring.c    | io_uring_try_cancel_uring_cmd         | 1      |
+| waitid.h      | opdef.c       | io_waitid                             | 1      |
+| waitid.h      | cancel.c      | io_waitid_cancel                      | 1      |
+| waitid.h      | opdef.c       | io_waitid_prep                        | 1      |
+| waitid.h      | io_uring.c    | io_waitid_remove_all                  | 1      |
+| xattr.h       | opdef.c       | io_fgetxattr                          | 1      |
+| xattr.h       | opdef.c       | io_fgetxattr_prep                     | 1      |
+| xattr.h       | opdef.c       | io_fsetxattr                          | 1      |
+| xattr.h       | opdef.c       | io_fsetxattr_prep                     | 1      |
+| xattr.h       | opdef.c       | io_getxattr                           | 1      |
+| xattr.h       | opdef.c       | io_getxattr_prep                      | 1      |
+| xattr.h       | opdef.c       | io_setxattr                           | 1      |
+| xattr.h       | opdef.c       | io_setxattr_prep                      | 1      |
+| xattr.h       | opdef.c       | io_xattr_cleanup                      | 1      |
 
 Continue with the list untill all functions used in each source are listed.
