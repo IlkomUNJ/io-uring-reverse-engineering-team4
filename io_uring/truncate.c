@@ -15,11 +15,29 @@
 #include "io_uring.h"
 #include "truncate.h"
 
+/*
+ * struct io_ftrunc - Struktur konteks untuk operasi ftruncate pada io_uring.
+ * @file:  File yang menjadi target operasi truncate.
+ * @len:   Panjang akhir file setelah truncate.
+ */
 struct io_ftrunc {
 	struct file			*file;
 	loff_t				len;
 };
 
+/*
+ * io_ftruncate_prep - Mempersiapkan operasi ftruncate.
+ * @req: io_kiocb untuk permintaan operasi.
+ * @sqe: Submission Queue Entry yang berisi parameter permintaan dari user space.
+ *
+ * Memvalidasi bahwa hanya field `off` dari sqe yang digunakan (field lainnya harus nol).
+ * Field `off` digunakan sebagai panjang file baru, yang disimpan dalam `ft->len`.
+ * Operasi ini disiapkan sebagai operasi asynchronous.
+ *
+ * Return:
+ *   0 jika sukses,
+ *  -EINVAL jika ada field yang tidak valid digunakan.
+ */
 int io_ftruncate_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_ftrunc *ft = io_kiocb_to_cmd(req, struct io_ftrunc);
@@ -34,6 +52,19 @@ int io_ftruncate_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * io_ftruncate - Menjalankan operasi ftruncate.
+ * @req: io_kiocb untuk permintaan operasi.
+ * @issue_flags: Flag untuk eksekusi, seperti non-blocking.
+ *
+ * Memanggil `do_ftruncate()` untuk memotong file yang ditunjuk oleh `req->file`
+ * menjadi panjang yang ditentukan dalam `ft->len`. Operasi ini dilakukan secara blocking.
+ *
+ * Hasil dari operasi dikembalikan ke user space melalui `io_req_set_res()`.
+ *
+ * Return:
+ *   IOU_OK selalu, hasil disimpan di `req->cqe.res`.
+ */
 int io_ftruncate(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_ftrunc *ft = io_kiocb_to_cmd(req, struct io_ftrunc);
