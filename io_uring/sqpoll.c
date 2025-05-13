@@ -27,6 +27,15 @@ enum {
 	IO_SQ_THREAD_SHOULD_PARK,
 };
 
+/*
+ * io_sq_thread_unpark - unpark a previously parked SQ thread
+ * @sqd: submission queue data
+ *
+ * This function unparks the SQ thread by clearing the SHOULD_PARK bit.
+ * If other threads have concurrently requested a park operation, it
+ * restores the SHOULD_PARK bit accordingly. Unlocks the SQD lock and
+ * wakes up the SQ thread.
+ */
 void io_sq_thread_unpark(struct io_sq_data *sqd)
 	__releases(&sqd->lock)
 {
@@ -43,6 +52,14 @@ void io_sq_thread_unpark(struct io_sq_data *sqd)
 	wake_up(&sqd->wait);
 }
 
+/*
+ * io_sq_thread_park - request park of SQ thread
+ * @sqd: submission queue data
+ *
+ * Marks the SQ thread as needing to park and increments the pending
+ * park count. Acquires the SQD lock and wakes the thread if it's
+ * already running, so it can enter the parked state.
+ */
 void io_sq_thread_park(struct io_sq_data *sqd)
 	__acquires(&sqd->lock)
 {
@@ -55,6 +72,14 @@ void io_sq_thread_park(struct io_sq_data *sqd)
 		wake_up_process(sqd->thread);
 }
 
+/*
+ * io_sq_thread_stop - stop and wait for SQ thread to exit
+ * @sqd: submission queue data
+ *
+ * Signals the SQ thread to stop and waits for it to fully exit.
+ * Ensures the thread is not the current one and has not already
+ * been marked to stop. Uses synchronization to wake and wait.
+ */
 void io_sq_thread_stop(struct io_sq_data *sqd)
 {
 	WARN_ON_ONCE(sqd->thread == current);
@@ -68,6 +93,14 @@ void io_sq_thread_stop(struct io_sq_data *sqd)
 	wait_for_completion(&sqd->exited);
 }
 
+/*
+ * io_put_sq_data - drop a reference to SQ thread data
+ * @sqd: submission queue data
+ *
+ * Decrements the reference count of the SQD structure. If this
+ * was the final reference, stops the thread and frees the structure.
+ * Warns if there are pending park requests.
+ */
 void io_put_sq_data(struct io_sq_data *sqd)
 {
 	if (refcount_dec_and_test(&sqd->refs)) {
@@ -78,6 +111,14 @@ void io_put_sq_data(struct io_sq_data *sqd)
 	}
 }
 
+/*
+ * io_sqd_update_thread_idle - update idle timeout for SQ thread
+ * @sqd: submission queue data
+ *
+ * Updates the cached idle timeout value for the SQ thread based
+ * on the maximum timeout configured by any of the associated contexts.
+ * Called during SQD configuration.
+ */
 static __cold void io_sqd_update_thread_idle(struct io_sq_data *sqd)
 {
 	struct io_ring_ctx *ctx;
