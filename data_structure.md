@@ -2336,7 +2336,307 @@ test_and_set_bit_lock | futex.c                   | test_and_set_bit_lock(0, &io
 test_bit               | filetable.h               | WARN_ON_ONCE(!test_bit(bit, table->bitmap));                                 | test_bit               | filetable.h                  | macro call                      
 u64_to_user_ptr        | epoll.c                   | ev = u64_to_user_ptr(READ_ONCE(sqe->addr));                                  | u64_to_user_ptr        | epoll.c                      | macro call                      
 unlikely              | cancel.c                  | if (unlikely(req->flags & REQ_F_BUFFER_SELECT))                             | unlikely               | cancel.c                     | macro call                      
-
+io_wq_work_node|io_uring/slist.h|struct io_wq_work_node *next|wq_list_add_tail, wq_list_del, wq_stack_extract|slist.h|Represents a node in a singly linked list used for managing work queue items
+io_wq_work_list|io_uring/slist.h|struct io_wq_work_node *first, *last|wq_list_add_tail, wq_list_cut, wq_list_splice|slist.h|Manages a list of io_wq_work_node elements, provides basic list operations for work queues
+io_cancel_data|io_uring/cancel.h|struct io_ring_ctx *ctx; struct file *file|io_try_cancel, io_cancel_req_match, io_sync_cancel|cancel.c|Holds cancellation context and criteria for finding matching I/O requests to cancel
+io_waitid_async|io_uring/waitid.h|struct io_kiocb *req; struct wait_opts wo|io_waitid, io_waitid_cancel, io_waitid_remove_all|waitid.c|Holds state for asynchronously handling waitid system calls
+io_kiocb (refcount part)|io_uring/refs.h|atomic_t refs|req_ref_inc_not_zero, req_ref_put_and_test, req_ref_get, req_ref_put|refs.h|Implements reference counting for io_kiocb request lifecycle management
+io_rsrc_node|io_uring/rsrc.h|struct io_mapped_ubuf *buf|io_rsrc_node_alloc|rsrc.c|Represents a resource node used for managing user buffers or fixed files
+io_mapped_ubuf|io_uring/rsrc.h|struct bio_vec bvec[] __counted_by(nr_bvecs)|io_import_fixed|rsrc.c|Describes user-space memory regions mapped into kernel space for I/O
+io_imu_folio_data|io_uring/rsrc.h|No inline fields shown in snippet|io_check_coalesce_buffer|rsrc.c|Stores coalesced folio information for batched buffer I/O
+io_wait_queue|io_uring/io_uring.h|struct wait_queue_entry wq, struct io_ring_ctx *ctx, struct hrtimer t|io_should_wake|io_uring/io_uring.h|used for waking logic with wait queues in io_uring context
+io_uring_fill_params|io_uring/io_uring.h|unsigned entries, struct io_uring_params *p|io_uring_fill_params|io_uring/io_uring.h|fills user-provided io_uring_params during setup
+io_cqe_cache_refill|io_uring/io_uring.h|struct io_ring_ctx *ctx, bool overflow|io_cqe_cache_refill|io_uring/io_uring.h|refills completion queue entry cache
+io_run_task_work_sig|io_uring/io_uring.h|struct io_ring_ctx *ctx|io_run_task_work_sig|io_uring/io_uring.h|runs deferred task work with signal
+io_req_defer_failed|io_uring/io_uring.h|struct io_kiocb *req, s32 res|io_req_defer_failed|io_uring/io_uring.h|handles request failure after deferral
+io_post_aux_cqe|io_uring/io_uring.h|struct io_ring_ctx *ctx, u64 user_data, s32 res, u32 cflags|io_post_aux_cqe|io_uring/io_uring.h|posts an auxiliary completion queue entry
+io_add_aux_cqe|io_uring/io_uring.h|struct io_ring_ctx *ctx, u64 user_data, s32 res, u32 cflags|io_add_aux_cqe|io_uring/io_uring.h|adds auxiliary CQE to ring
+io_req_post_cqe|io_uring/io_uring.h|struct io_kiocb *req, s32 res, u32 cflags|io_req_post_cqe|io_uring/io_uring.h|posts completion result for request
+__io_commit_cqring_flush|io_uring/io_uring.h|struct io_ring_ctx *ctx|__io_commit_cqring_flush|io_uring/io_uring.h|flushes the CQ ring to user
+io_file_get_normal|io_uring/io_uring.h|struct io_kiocb *req, int fd|io_file_get_normal|io_uring/io_uring.h|gets normal (non-fixed) file from fd
+io_file_get_fixed|io_uring/io_uring.h|struct io_kiocb *req, int fd, struct file **f|io_file_get_fixed|io_uring/io_uring.h|retrieves file from fixed index
+__io_req_task_work_add|io_uring/io_uring.h|struct io_kiocb *req, unsigned flags|__io_req_task_work_add|io_uring/io_uring.h|adds task work to the task queue
+io_req_task_work_add_remote|io_uring/io_uring.h|struct io_kiocb *req, struct io_ring_ctx *ctx, unsigned flags|io_req_task_work_add_remote|io_uring/io_uring.h|adds task work to remote task
+io_alloc_async_data|io_uring/io_uring.h|struct io_kiocb *req|io_alloc_async_data|io_uring/io_uring.h|allocates async data for request
+io_req_task_queue|io_uring/io_uring.h|struct io_kiocb *req|io_req_task_queue|io_uring/io_uring.h|queues task work for request
+io_req_task_complete|io_uring/io_uring.h|struct io_kiocb *req, struct io_tw_state *ts|io_req_task_complete|io_uring/io_uring.h|completes task request
+io_req_task_queue_fail|io_uring/io_uring.h|struct io_kiocb *req, int ret|io_req_task_queue_fail|io_uring/io_uring.h|queues a failed task request
+io_req_task_submit|io_uring/io_uring.h|struct io_kiocb *req, struct io_tw_state *ts|io_req_task_submit|io_uring/io_uring.h|submits a task request
+io_handle_tw_list|io_uring/io_uring.h|struct llist_node *node, unsigned int *count, unsigned int max_entries|io_handle_tw_list|io_uring/io_uring.h|handles task work list
+tctx_task_work_run|io_uring/io_uring.h|struct io_uring_task *tctx, unsigned int max_entries, unsigned int *count|tctx_task_work_run|io_uring/io_uring.h|runs task work for a given task context
+tctx_task_work|io_uring/io_uring.h|struct callback_head *cb|tctx_task_work|io_uring/io_uring.h|entry point for task work processing
+io_uring_cancel_generic|io_uring/io_uring.h|bool cancel_all, struct io_sq_data *sqd|io_uring_cancel_generic|io_uring/io_uring.h|cancels all requests if needed
+io_uring_alloc_task_context|io_uring/io_uring.h|struct task_struct *task, struct io_ring_ctx *ctx|io_uring_alloc_task_context|io_uring/io_uring.h|allocates io_uring context for a task
+io_ring_add_registered_file|io_uring/io_uring.h|struct io_uring_task *tctx, struct file *file, u32 index|io_ring_add_registered_file|io_uring/io_uring.h|adds file to registered list
+io_req_queue_iowq|io_uring/io_uring.h|struct io_kiocb *req|io_req_queue_iowq|io_uring/io_uring.h|queues request to io worker queue
+io_poll_issue|io_uring/io_uring.h|struct io_kiocb *req, struct io_tw_state *ts|io_poll_issue|io_uring/io_uring.h|issues a poll-type request
+io_submit_sqes|io_uring/io_uring.h|struct io_ring_ctx *ctx, unsigned int nr|io_submit_sqes|io_uring/io_uring.h|submits a batch of SQEs
+io_do_iopoll|io_uring/io_uring.h|struct io_ring_ctx *ctx, bool force_nonspin|io_do_iopoll|io_uring/io_uring.h|performs I/O polling
+__io_submit_flush_completions|io_uring/io_uring.h|struct io_ring_ctx *ctx|__io_submit_flush_completions|io_uring/io_uring.h|flushes completion ring entries
+io_wq_free_work|io_uring/io_uring.h|struct io_wq_work *work|io_wq_free_work|io_uring/io_uring.h|frees an io_wq_work structure
+io_wq_submit_work|io_uring/io_uring.h|struct io_wq_work *work|io_wq_submit_work|io_uring/io_uring.h|submits io_wq work
+io_free_req|io_uring/io_uring.h|struct io_kiocb *req|io_free_req|io_uring/io_uring.h|frees a request
+io_queue_next|io_uring/io_uring.h|struct io_kiocb *req|io_queue_next|io_uring/io_uring.h|queues the next request in chain
+io_task_refs_refill|io_uring/io_uring.h|struct io_uring_task *tctx|io_task_refs_refill|io_uring/io_uring.h|refills task ref counters
+__io_alloc_req_refill|io_uring/io_uring.h|struct io_ring_ctx *ctx|__io_alloc_req_refill|io_uring/io_uring.h|refills internal request pool
+io_match_task_safe|io_uring/io_uring.h|struct io_kiocb *head, struct io_uring_task *tctx, bool cancel_all|io_match_task_safe|io_uring/io_uring.h|matches tasks safely for cancellation
+io_activate_pollwq|io_uring/io_uring.h|struct io_ring_ctx *ctx|io_activate_pollwq|io_uring/io_uring.h|activates polling worker queue
+io_ftruncate_prep | io_uring/truncate.h | struct io_kiocb*, struct io_uring_sqe* | io_ftruncate_prep | io_uring/truncate.h | function parameter
+io_ftruncate    | io_uring/truncate.h | struct io_kiocb*, unsigned int | io_ftruncate | io_uring/truncate.h | function parameter
+io_tctx_node    | io_uring/tctx.h | struct list_head, struct task_struct*, struct io_ring_ctx* | io_tctx_node | io_uring/tctx.h | structure definition for managing task context node
+io_uring_alloc_task_context | io_uring/tctx.h | struct task_struct*, struct io_ring_ctx* | io_uring_alloc_task_context | io_uring/tctx.h | function parameter
+__io_uring_add_tctx_node | io_uring/tctx.h | struct io_ring_ctx* | __io_uring_add_tctx_node | io_uring/tctx.h | function parameter
+io_uring_clean_tctx | io_uring/tctx.h | struct io_uring_task* | io_uring_clean_tctx | io_uring/tctx.h | function parameter
+io_ringfd_register | io_uring/tctx.h | struct io_ring_ctx*, void* | io_ringfd_register | io_uring/tctx.h | function parameter
+io_ringfd_unregister | io_uring/tctx.h | struct io_ring_ctx*, void* | io_ringfd_unregister | io_uring/tctx.h | function parameter
+io_uring_add_tctx_node | io_uring/tctx.h | struct io_ring_ctx* | io_uring_add_tctx_node | io_uring/tctx.h | function parameter
+io_sq_data       | io_uring/sqpoll.h | struct mutex, struct list_head, struct task_struct*, struct wait_queue_head | io_sq_data | io_uring/sqpoll.h | structure definition for handling SQ data
+io_sq_offload_create | io_uring/sqpoll.h | struct io_ring_ctx*, struct io_uring_params* | io_sq_offload_create | io_uring/sqpoll.h | function parameter
+io_sq_thread_finish | io_uring/sqpoll.h | struct io_ring_ctx* | io_sq_thread_finish | io_uring/sqpoll.h | function parameter
+io_sq_thread_stop | io_uring/sqpoll.h | struct io_sq_data* | io_sq_thread_stop | io_uring/sqpoll.h | function parameter
+io_sq_thread_park | io_uring/sqpoll.h | struct io_sq_data* | io_sq_thread_park | io_uring/sqpoll.h | function parameter
+io_sq_thread_unpark | io_uring/sqpoll.h | struct io_sq_data* | io_sq_thread_unpark | io_uring/sqpoll.h | function parameter
+io_put_sq_data   | io_uring/sqpoll.h | struct io_sq_data* | io_put_sq_data | io_uring/sqpoll.h | function parameter
+io_sqpoll_wait_sq | io_uring/sqpoll.h | struct io_ring_ctx* | io_sqpoll_wait_sq | io_uring/sqpoll.h | function parameter
+io_sqpoll_wq_cpu_affinity | io_uring/sqpoll.h | struct io_ring_ctx*, cpumask_var_t | io_sqpoll_wq_cpu_affinity | io_uring/sqpoll.h | function parameter
+io_poll          | io_uring/poll.h | struct file*, struct wait_queue_head*, struct wait_queue_entry | io_poll | io_uring/poll.h | structure definition for poll mechanism
+async_poll       | io_uring/poll.h | struct io_poll*, struct io_poll* | async_poll | io_uring/poll.h | structure definition for asynchronous poll
+io_poll_multishot_retry | io_uring/poll.h | struct io_kiocb* | io_poll_multishot_retry | io_uring/poll.h | function parameter
+io_poll_add_prep | io_uring/poll.h | struct io_kiocb*, struct io_uring_sqe* | io_poll_add_prep | io_uring/poll.h | function parameter
+io_poll_add      | io_uring/poll.h | struct io_kiocb*, unsigned int | io_poll_add | io_uring/poll.h | function parameter
+io_poll_remove_prep | io_uring/poll.h | struct io_kiocb*, struct io_uring_sqe* | io_poll_remove_prep | io_uring/poll.h | function parameter
+io_poll_remove   | io_uring/poll.h | struct io_kiocb*, unsigned int | io_poll_remove | io_uring/poll.h | function parameter
+io_poll_cancel   | io_uring/poll.h | struct io_ring_ctx*, struct io_cancel_data* | io_poll_cancel | io_uring/poll.h | function parameter
+io_arm_poll_handler | io_uring/poll.h | struct io_kiocb*, unsigned | io_arm_poll_handler | io_uring/poll.h | function parameter
+io_poll_remove_all | io_uring/poll.h | struct io_ring_ctx*, struct io_uring_task* | io_poll_remove_all | io_uring/poll.h | function parameter
+io_poll_task_func | io_uring/poll.h | struct io_kiocb*, struct io_tw_state* | io_poll_task_func | io_uring/poll.h | function parameter
+io_renameat_prep | io_uring/fs.h | struct io_kiocb*, struct io_uring_sqe* | io_renameat_prep | io_uring/fs.h | function parameter
+io_renameat    | io_uring/fs.h | struct io_kiocb*, unsigned int | io_renameat | io_uring/fs.h | function parameter
+io_renameat_cleanup | io_uring/fs.h | struct io_kiocb* | io_renameat_cleanup | io_uring/fs.h | function parameter
+io_unlinkat_prep | io_uring/fs.h | struct io_kiocb*, struct io_uring_sqe* | io_unlinkat_prep | io_uring/fs.h | function parameter
+io_unlinkat    | io_uring/fs.h | struct io_kiocb*, unsigned int | io_unlinkat | io_uring/fs.h | function parameter
+io_unlinkat_cleanup | io_uring/fs.h | struct io_kiocb* | io_unlinkat_cleanup | io_uring/fs.h | function parameter
+io_mkdirat_prep | io_uring/fs.h | struct io_kiocb*, struct io_uring_sqe* | io_mkdirat_prep | io_uring/fs.h | function parameter
+io_mkdirat     | io_uring/fs.h | struct io_kiocb*, unsigned int | io_mkdirat | io_uring/fs.h | function parameter
+io_mkdirat_cleanup | io_uring/fs.h | struct io_kiocb* | io_mkdirat_cleanup | io_uring/fs.h | function parameter
+io_symlinkat_prep | io_uring/fs.h | struct io_kiocb*, struct io_uring_sqe* | io_symlinkat_prep | io_uring/fs.h | function parameter
+io_symlinkat   | io_uring/fs.h | struct io_kiocb*, unsigned int | io_symlinkat | io_uring/fs.h | function parameter
+io_linkat_prep | io_uring/fs.h | struct io_kiocb*, struct io_uring_sqe* | io_linkat_prep | io_uring/fs.h | function parameter
+io_linkat      | io_uring/fs.h | struct io_kiocb*, unsigned int | io_linkat | io_uring/fs.h | function parameter
+io_link_cleanup | io_uring/fs.h | struct io_kiocb* | io_link_cleanup | io_uring/fs.h | function parameter
+io_issue_def   | io_uring/opdef.h | int (*issue)(struct io_kiocb*, unsigned int), int (*prep)(struct io_kiocb*, const struct io_uring_sqe*) | io_issue_defs | io_uring/opdef.h | structure for defining issue and prep functions
+io_cold_def    | io_uring/opdef.h | void (*cleanup)(struct io_kiocb*), void (*fail)(struct io_kiocb*) | io_cold_defs | io_uring/opdef.h | structure for handling cleanup and fail functions
+io_meta_state  | io_uring/rw.h | struct iov_iter_state iter_meta | io_meta_state | io_uring/rw.h | structure for managing metadata during read/write operations
+io_async_rw    | io_uring/rw.h | struct iovec* free_iovec, struct iov_iter iter, struct iov_iter_state iter_state, struct iovec fast_iov | io_async_rw | io_uring/rw.h | structure for managing asynchronous read/write operations
+io_prep_read_fixed | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_prep_read_fixed | io_uring/rw.h | function parameter
+io_prep_write_fixed | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_prep_write_fixed | io_uring/rw.h | function parameter
+io_prep_readv  | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_prep_readv | io_uring/rw.h | function parameter
+io_prep_writev | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_prep_writev | io_uring/rw.h | function parameter
+io_prep_read   | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_prep_read | io_uring/rw.h | function parameter
+io_prep_write  | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_prep_write | io_uring/rw.h | function parameter
+io_read        | io_uring/rw.h | struct io_kiocb*, unsigned int | io_read | io_uring/rw.h | function parameter
+io_write       | io_uring/rw.h | struct io_kiocb*, unsigned int | io_write | io_uring/rw.h | function parameter
+io_readv_writev_cleanup | io_uring/rw.h | struct io_kiocb* | io_readv_writev_cleanup | io_uring/rw.h | function parameter
+io_rw_fail     | io_uring/rw.h | struct io_kiocb* | io_rw_fail | io_uring/rw.h | function parameter
+io_req_rw_complete | io_uring/rw.h | struct io_kiocb*, struct io_tw_state* | io_req_rw_complete | io_uring/rw.h | function parameter
+io_read_mshot_prep | io_uring/rw.h | struct io_kiocb*, struct io_uring_sqe* | io_read_mshot_prep | io_uring/rw.h | function parameter
+io_read_mshot  | io_uring/rw.h | struct io_kiocb*, unsigned int | io_read_mshot | io_uring/rw.h | function parameter
+io_tee_prep    | io_uring/splice.h | struct io_kiocb*, struct io_uring_sqe* | io_tee_prep | io_uring/splice.h | function parameter
+io_tee         | io_uring/splice.h | struct io_kiocb*, unsigned int | io_tee | io_uring/splice.h | function parameter
+io_splice_cleanup | io_uring/splice.h | struct io_kiocb* | io_splice_cleanup | io_uring/splice.h | function parameter
+io_splice_prep | io_uring/splice.h | struct io_kiocb*, struct io_uring_sqe* | io_splice_prep | io_uring/splice.h | function parameter
+io_splice      | io_uring/splice.h | struct io_kiocb*, unsigned int | io_splice | io_uring/splice.h | function parameter
+io_wq          | io_uring/io-wq.h | - | io_wq | io_uring/io-wq.h | structure for I/O work queue
+io_wq_work_fn  | io_uring/io-wq.h | typedef for function pointer | io_wq_work_fn | io_uring/io-wq.h | function pointer type for work function
+free_work_fn   | io_uring/io-wq.h | typedef for function pointer | free_work_fn | io_uring/io-wq.h | function pointer type for freeing work
+io_wq_hash     | io_uring/io-wq.h | struct wait_queue_head wait | io_wq_hash | io_uring/io-wq.h | structure for managing I/O work queue hash
+io_wq_data     | io_uring/io-wq.h | struct io_wq_hash* hash, struct task_struct* task | io_wq_data | io_uring/io-wq.h | structure for managing I/O work queue data
+io_wq_create   | io_uring/io-wq.h | unsigned bounded, struct io_wq_data* data | io_wq_create | io_uring/io-wq.h | function for creating an I/O work queue
+io_wq_exit_start | io_uring/io-wq.h | struct io_wq* | io_wq_exit_start | io_uring/io-wq.h | function to start I/O work queue exit
+io_wq_put_and_exit | io_uring/io-wq.h | struct io_wq* | io_wq_put_and_exit | io_uring/io-wq.h | function to put and exit I/O work queue
+io_wq_enqueue  | io_uring/io-wq.h | struct io_wq* wq, struct io_wq_work* work | io_wq_enqueue | io_uring/io-wq.h | function for enqueueing work in I/O work queue
+io_wq_hash_work | io_uring/io-wq.h | struct io_wq_work* work, void* val | io_wq_hash_work | io_uring/io-wq.h | function for hashing work in I/O work queue
+io_wq_cpu_affinity | io_uring/io-wq.h | struct io_uring_task* tctx, cpumask_var_t mask | io_wq_cpu_affinity | io_uring/io-wq.h | function for setting CPU affinity for I/O work queue
+io_wq_max_workers | io_uring/io-wq.h | struct io_wq* wq, int* new_count | io_wq_max_workers | io_uring/io-wq.h | function for setting maximum number of workers in I/O work queue
+io_wq_is_hashed | io_uring/io-wq.h | struct io_wq_work* work | io_wq_is_hashed | io_uring/io-wq.h | function to check if work is hashed in I/O work queue
+work_cancel_fn | io_uring/io-wq.h | typedef for function pointer | work_cancel_fn | io_uring/io-wq.h | function pointer type for canceling work
+io_wq_cancel_cb | io_uring/io-wq.h | struct io_wq* wq, work_cancel_fn* cancel | io_wq_cancel_cb | io_uring/io-wq.h | function for canceling work in I/O work queue
+io_wq_worker_sleeping | io_uring/io-wq.h | struct task_struct* tsk | io_wq_worker_sleeping | io_uring/io-wq.h | function for worker sleeping state
+io_wq_worker_running | io_uring/io-wq.h | struct task_struct* tsk | io_wq_worker_running | io_uring/io-wq.h | function for worker running state
+io_pin_pages   | io_uring/memmap.h | unsigned long ubuf, unsigned long len, int* npages | io_pin_pages | io_uring/memmap.h | function for pinning memory pages
+io_uring_nommu_mmap_capabilities | io_uring/memmap.h | struct file* file | io_uring_nommu_mmap_capabilities | io_uring/memmap.h | function for checking MMU capabilities
+io_uring_get_unmapped_area | io_uring/memmap.h | struct file* file, unsigned long addr | io_uring_get_unmapped_area | io_uring/memmap.h | function for getting an unmapped area
+io_uring_mmap  | io_uring/memmap.h | struct file* file, struct vm_area_struct* vma | io_uring_mmap | io_uring/memmap.h | function for memory mapping
+io_free_region | io_uring/memmap.h | struct io_ring_ctx* ctx, struct io_mapped_region* mr | io_free_region | io_uring/memmap.h | function for freeing memory region
+io_create_region | io_uring/memmap.h | struct io_ring_ctx* ctx, struct io_mapped_region* mr, struct io_uring_region_desc* reg | io_create_region | io_uring/memmap.h | function for creating memory region
+io_create_region_mmap_safe | io_uring/memmap.h | struct io_ring_ctx* ctx, struct io_mapped_region* mr, struct io_uring_region_desc* reg | io_create_region_mmap_safe | io_uring/memmap.h | function for safely creating memory region
+io_region_get_ptr | io_uring/memmap.h | struct io_mapped_region* mr | io_region_get_ptr | io_uring/memmap.h | function for getting pointer to region
+io_region_is_set | io_uring/memmap.h | struct io_mapped_region* mr | io_region_is_set | io_uring/memmap.h | function for checking if region is set
+io_eventfd_unregister | io_uring/register.h | struct io_ring_ctx* ctx | io_eventfd_unregister | io_uring/register.h | function to unregister eventfd
+io_unregister_personality | io_uring/register.h | struct io_ring_ctx* ctx, unsigned id | io_unregister_personality | io_uring/register.h | function to unregister personality
+io_uring_register_get_file | io_uring/register.h | unsigned int fd, bool registered | io_uring_register_get_file | io_uring/register.h | function to get a file from registered set
+io_madvise_prep | io_uring/advise.h | struct io_kiocb*, struct io_uring_sqe* | io_madvise_prep | io_uring/advise.h | function to prepare madvise operation
+io_madvise | io_uring/advise.h | struct io_kiocb*, unsigned int | io_madvise | io_uring/advise.h | function to perform madvise operation
+io_fadvise_prep | io_uring/advise.h | struct io_kiocb*, struct io_uring_sqe* | io_fadvise_prep | io_uring/advise.h | function to prepare fadvise operation
+io_fadvise | io_uring/advise.h | struct io_kiocb*, unsigned int | io_fadvise | io_uring/advise.h | function to perform fadvise operation
+io_sfr_prep | io_uring/sync.h | struct io_kiocb*, struct io_uring_sqe* | io_sfr_prep | io_uring/sync.h | function to prepare sync file range
+io_sync_file_range | io_uring/sync.h | struct io_kiocb*, unsigned int | io_sync_file_range | io_uring/sync.h | function to perform sync file range operation
+io_fsync_prep | io_uring/sync.h | struct io_kiocb*, struct io_uring_sqe* | io_fsync_prep | io_uring/sync.h | function to prepare fsync operation
+io_fsync | io_uring/sync.h | struct io_kiocb*, unsigned int | io_fsync | io_uring/sync.h | function to perform fsync operation
+io_fallocate | io_uring/sync.h | struct io_kiocb*, unsigned int | io_fallocate | io_uring/sync.h | function to perform fallocate operation
+io_fallocate_prep | io_uring/sync.h | struct io_kiocb*, struct io_uring_sqe* | io_fallocate_prep | io_uring/sync.h | function to prepare fallocate operation
+io_xattr_cleanup | io_uring/xattr.h | struct io_kiocb* | io_xattr_cleanup | io_uring/xattr.h | function to cleanup xattr operation
+io_fsetxattr_prep | io_uring/xattr.h | struct io_kiocb*, struct io_uring_sqe* | io_fsetxattr_prep | io_uring/xattr.h | function to prepare fsetxattr operation
+io_fsetxattr | io_uring/xattr.h | struct io_kiocb*, unsigned int | io_fsetxattr | io_uring/xattr.h | function to perform fsetxattr operation
+io_setxattr_prep | io_uring/xattr.h | struct io_kiocb*, struct io_uring_sqe* | io_setxattr_prep | io_uring/xattr.h | function to prepare setxattr operation
+io_setxattr | io_uring/xattr.h | struct io_kiocb*, unsigned int | io_setxattr | io_uring/xattr.h | function to perform setxattr operation
+io_fgetxattr_prep | io_uring/xattr.h | struct io_kiocb*, struct io_uring_sqe* | io_fgetxattr_prep | io_uring/xattr.h | function to prepare fgetxattr operation
+io_fgetxattr | io_uring/xattr.h | struct io_kiocb*, unsigned int | io_fgetxattr | io_uring/xattr.h | function to perform fgetxattr operation
+io_getxattr_prep | io_uring/xattr.h | struct io_kiocb*, struct io_uring_sqe* | io_getxattr_prep | io_uring/xattr.h | function to prepare getxattr operation
+io_getxattr | io_uring/xattr.h | struct io_kiocb*, unsigned int | io_getxattr | io_uring/xattr.h | function to perform getxattr operation
+io_futex_prep | io_uring/futex.h | struct io_kiocb*, struct io_uring_sqe* | io_futex_prep | io_uring/futex.h | function to prepare futex operation
+io_futexv_prep | io_uring/futex.h | struct io_kiocb*, struct io_uring_sqe* | io_futexv_prep | io_uring/futex.h | function to prepare futexv operation
+io_futex_wait | io_uring/futex.h | struct io_kiocb*, unsigned int | io_futex_wait | io_uring/futex.h | function to perform futex wait operation
+io_futexv_wait | io_uring/futex.h | struct io_kiocb*, unsigned int | io_futexv_wait | io_uring/futex.h | function to perform futexv wait operation
+io_futex_wake | io_uring/futex.h | struct io_kiocb*, unsigned int | io_futex_wake | io_uring/futex.h | function to perform futex wake operation
+io_futex_cancel | io_uring/futex.h | struct io_ring_ctx* ctx, struct io_cancel_data* cd | io_futex_cancel | io_uring/futex.h | function to cancel futex operation
+io_futex_remove_all | io_uring/futex.h | struct io_ring_ctx* ctx, struct io_uring_task* tctx, bool cancel_all | io_futex_remove_all | io_uring/futex.h | function to remove all futex operations
+io_futex_cache_init | io_uring/futex.h | struct io_ring_ctx* ctx | io_futex_cache_init | io_uring/futex.h | function to initialize futex cache
+io_futex_cache_free | io_uring/futex.h | struct io_ring_ctx* ctx | io_futex_cache_free | io_uring/futex.h | function to free futex cache
+io_buffer_list | io_uring/kbuf.h | struct list_head buf_list, struct io_uring_buf_ring* buf_ring | io_buffer_list | io_uring/kbuf.h | structure for managing a list of buffers
+io_buffer | io_uring/kbuf.h | struct list_head list | io_buffer | io_uring/kbuf.h | structure for managing individual buffer
+buf_sel_arg | io_uring/kbuf.h | struct iovec* iovs | buf_sel_arg | io_uring/kbuf.h | argument for buffer selection
+io_buffer_select | io_uring/kbuf.h | struct io_kiocb* req, size_t* len | io_buffer_select | io_uring/kbuf.h | function to select buffer
+io_buffers_select | io_uring/kbuf.h | struct io_kiocb* req, struct buf_sel_arg* arg | io_buffers_select | io_uring/kbuf.h | function to select buffers
+io_buffers_peek | io_uring/kbuf.h | struct io_kiocb* req, struct buf_sel_arg* arg | io_buffers_peek | io_uring/kbuf.h | function to peek buffers
+io_destroy_buffers | io_uring/kbuf.h | struct io_ring_ctx* ctx | io_destroy_buffers | io_uring/kbuf.h | function to destroy buffers
+io_remove_buffers_prep | io_uring/kbuf.h | struct io_kiocb* req, struct io_uring_sqe* sqe | io_remove_buffers_prep | io_uring/kbuf.h | function to prepare removal of buffers
+io_remove_buffers | io_uring/kbuf.h | struct io_kiocb* req, unsigned int issue_flags | io_remove_buffers | io_uring/kbuf.h | function to remove buffers
+io_provide_buffers_prep | io_uring/kbuf.h | struct io_kiocb* req, struct io_uring_sqe* sqe | io_provide_buffers_prep | io_uring/kbuf.h | function to prepare buffer provision
+io_provide_buffers | io_uring/kbuf.h | struct io_kiocb* req, unsigned int issue_flags | io_provide_buffers | io_uring/kbuf.h | function to provide buffers
+io_register_pbuf_ring | io_uring/kbuf.h | struct io_ring_ctx* ctx, void __user* arg | io_register_pbuf_ring | io_uring/kbuf.h | function to register buffer ring
+io_unregister_pbuf_ring | io_uring/kbuf.h | struct io_ring_ctx* ctx, void __user* arg | io_unregister_pbuf_ring | io_uring/kbuf.h | function to unregister buffer ring
+io_register_pbuf_status | io_uring/kbuf.h | struct io_ring_ctx* ctx, void __user* arg | io_register_pbuf_status | io_uring/kbuf.h | function to register buffer status
+__io_put_kbuf | io_uring/kbuf.h | struct io_kiocb* req, int len, unsigned issue_flags | __io_put_kbuf | io_uring/kbuf.h | function to put kernel buffer
+io_kbuf_recycle_legacy | io_uring/kbuf.h | struct io_kiocb* req, unsigned issue_flags | io_kbuf_recycle_legacy | io_uring/kbuf.h | function to recycle legacy kernel buffer
+io_pbuf_get_region | io_uring/kbuf.h | struct io_ring_ctx* ctx | io_pbuf_get_region | io_uring/kbuf.h | function to get mapped region of pbuf
+io_kbuf_recycle_ring | io_uring/kbuf.h | struct io_kiocb* req | io_kbuf_recycle_ring | io_uring/kbuf.h | function to recycle buffer ring
+io_do_buffer_select | io_uring/kbuf.h | struct io_kiocb* req | io_do_buffer_select | io_uring/kbuf.h | function to select buffer in legacy buffer
+io_kbuf_recycle | io_uring/kbuf.h | struct io_kiocb* req, unsigned issue_flags | io_kbuf_recycle | io_uring/kbuf.h | function to recycle kernel buffer
+io_kbuf_commit | io_uring/kbuf.h | struct io_kiocb* req, struct io_buffer_list* bl, int len, int nr | io_kbuf_commit | io_uring/kbuf.h | function to commit kernel buffer
+__io_put_kbuf_ring | io_uring/kbuf.h | struct io_kiocb* req, int len, int nr | __io_put_kbuf_ring | io_uring/kbuf.h | function to put kbuf ring
+__io_put_kbuf_list | io_uring/kbuf.h | struct io_kiocb* req, int len, struct list_head* list | __io_put_kbuf_list | io_uring/kbuf.h | function to put kbuf list
+io_kbuf_drop | io_uring/kbuf.h | struct io_kiocb* req | io_kbuf_drop | io_uring/kbuf.h | function to drop kernel buffer
+__io_put_kbufs | io_uring/kbuf.h | struct io_kiocb* req, int len | __io_put_kbufs | io_uring/kbuf.h | function to put kbufs
+io_put_kbuf | io_uring/kbuf.h | struct io_kiocb* req, int len | io_put_kbuf | io_uring/kbuf.h | function to put kernel buffer
+io_put_kbufs | io_uring/kbuf.h | struct io_kiocb* req, int len | io_put_kbufs | io_uring/kbuf.h | function to put multiple kernel buffers
+io_alloc_cache_free | io_uring/alloc_cache.h | struct io_alloc_cache* cache | io_alloc_cache_free | io_uring/alloc_cache.h | function to free cache
+io_alloc_cache_init | io_uring/alloc_cache.h | struct io_alloc_cache* cache | io_alloc_cache_init | io_uring/alloc_cache.h | function to initialize cache
+io_cache_alloc_new | io_uring/alloc_cache.h | struct io_alloc_cache* cache, gfp_t gfp | io_cache_alloc_new | io_uring/alloc_cache.h | function to allocate new cache
+io_alloc_cache_kasan | io_uring/alloc_cache.h | struct iovec** iov, int* nr | io_alloc_cache_kasan | io_uring/alloc_cache.h | function for kasan cache allocation
+io_alloc_cache_put | io_uring/alloc_cache.h | struct io_alloc_cache* cache | io_alloc_cache_put | io_uring/alloc_cache.h | function to put cache object
+io_alloc_cache_get | io_uring/alloc_cache.h | struct io_alloc_cache* cache | io_alloc_cache_get | io_uring/alloc_cache.h | function to get cache object
+io_cache_alloc | io_uring/alloc_cache.h | struct io_alloc_cache* cache, gfp_t gfp | io_cache_alloc | io_uring/alloc_cache.h | function to allocate from cache
+io_notif_data | io_uring/notif.h | struct file* file, struct ubuf_info uarg, struct io_notif_data* next, struct io_notif_data* head | io_notif_data | io_uring/notif.h | structure for notification data
+io_alloc_notif | io_uring/notif.h | struct io_ring_ctx* ctx | io_alloc_notif | io_uring/notif.h | function to allocate notification data
+io_tx_ubuf_complete | io_uring/notif.h | struct sk_buff* skb, struct ubuf_info* uarg | io_tx_ubuf_complete | io_uring/notif.h | function to complete TX buffer processing
+io_notif_to_data | io_uring/notif.h | struct io_kiocb* notif | io_notif_to_data | io_uring/notif.h | function to convert notification to data
+io_notif_flush | io_uring/notif.h | struct io_kiocb* notif | io_notif_flush | io_uring/notif.h | function to flush notification data
+io_notif_account_mem | io_uring/notif.h | struct io_kiocb* notif, unsigned len | io_notif_account_mem | io_uring/notif.h | function to account for notification memory usage
+io_async_msghdr | io_uring/net.h | struct iovec* free_iov, struct iovec fast_iov, struct sockaddr __user* uaddr, struct msghdr msg, struct sockaddr_storage addr | io_async_msghdr | io_uring/net.h | structure for asynchronous message header
+io_shutdown_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_shutdown_prep | io_uring/net.h | function to prepare shutdown operation
+io_shutdown | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_shutdown | io_uring/net.h | function to perform shutdown operation
+io_sendmsg_recvmsg_cleanup | io_uring/net.h | struct io_kiocb* req | io_sendmsg_recvmsg_cleanup | io_uring/net.h | function to cleanup after sendmsg/recvmsg
+io_sendmsg_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_sendmsg_prep | io_uring/net.h | function to prepare sendmsg operation
+io_sendmsg | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_sendmsg | io_uring/net.h | function to send message
+io_send | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_send | io_uring/net.h | function to send data
+io_recvmsg_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_recvmsg_prep | io_uring/net.h | function to prepare recvmsg operation
+io_recvmsg | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_recvmsg | io_uring/net.h | function to receive message
+io_recv | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_recv | io_uring/net.h | function to receive data
+io_sendrecv_fail | io_uring/net.h | struct io_kiocb* req | io_sendrecv_fail | io_uring/net.h | function to handle send/recv failure
+io_accept_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_accept_prep | io_uring/net.h | function to prepare accept operation
+io_accept | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_accept | io_uring/net.h | function to accept connection
+io_socket_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_socket_prep | io_uring/net.h | function to prepare socket creation
+io_socket | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_socket | io_uring/net.h | function to create socket
+io_connect_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_connect_prep | io_uring/net.h | function to prepare connect operation
+io_connect | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_connect | io_uring/net.h | function to connect socket
+io_send_zc | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_send_zc | io_uring/net.h | function to send zero-copy data
+io_sendmsg_zc | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_sendmsg_zc | io_uring/net.h | function to send zero-copy message
+io_send_zc_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_send_zc_prep | io_uring/net.h | function to prepare zero-copy send
+io_send_zc_cleanup | io_uring/net.h | struct io_kiocb* req | io_send_zc_cleanup | io_uring/net.h | function to cleanup after zero-copy send
+io_bind_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_bind_prep | io_uring/net.h | function to prepare bind operation
+io_bind | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_bind | io_uring/net.h | function to bind socket
+io_listen_prep | io_uring/net.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_listen_prep | io_uring/net.h | function to prepare listen operation
+io_listen | io_uring/net.h | struct io_kiocb* req, unsigned int issue_flags | io_listen | io_uring/net.h | function to listen for connections
+io_ring_ctx | io_uring/napi.h | various (context structure) | io_napi_init, io_napi_free, io_register_napi, io_unregister_napi, __io_napi_add_id, __io_napi_busy_loop, io_napi_sqpoll_busy_poll, io_napi, io_napi_add | io_uring/napi.h | structure for ring context
+io_napi_init | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_init | io_uring/napi.h | function to initialize napi for io_ring_ctx
+io_napi_free | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_free | io_uring/napi.h | function to free napi resources for io_ring_ctx
+io_register_napi | io_uring/napi.h | struct io_ring_ctx* ctx, void __user* arg | io_register_napi | io_uring/napi.h | function to register napi
+io_unregister_napi | io_uring/napi.h | struct io_ring_ctx* ctx, void __user* arg | io_unregister_napi | io_uring/napi.h | function to unregister napi
+__io_napi_add_id | io_uring/napi.h | struct io_ring_ctx* ctx, unsigned int napi_id | __io_napi_add_id | io_uring/napi.h | function to add napi id
+__io_napi_busy_loop | io_uring/napi.h | struct io_ring_ctx* ctx, struct io_wait_queue* iowq | __io_napi_busy_loop | io_uring/napi.h | function for busy loop in napi
+io_napi_sqpoll_busy_poll | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_sqpoll_busy_poll | io_uring/napi.h | function to poll for sqpoll busy state
+io_napi | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi | io_uring/napi.h | function to check napi status
+io_napi_add | io_uring/napi.h | struct io_kiocb* req | io_napi_add | io_uring/napi.h | function to add napi request
+io_napi_busy_loop | io_uring/napi.h | struct io_ring_ctx* ctx, struct io_wait_queue* iowq | io_napi_busy_loop | io_uring/napi.h | function for busy loop in napi (inline)
+io_napi_add | io_uring/napi.h | struct io_kiocb* req | io_napi_add | io_uring/napi.h | function for adding napi to io_kiocb (inline)
+io_napi_sqpoll_busy_poll | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_sqpoll_busy_poll | io_uring/napi.h | function to poll sqpoll busy (inline)
+io_epoll_ctl_prep | io_uring/epoll.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_epoll_ctl_prep | io_uring/epoll.h | function to prepare epoll control operation
+io_epoll_ctl | io_uring/epoll.h | struct io_kiocb* req, unsigned int issue_flags | io_epoll_ctl | io_uring/epoll.h | function to perform epoll control
+io_alloc_file_tables | io_uring/filetable.h | struct io_ring_ctx* ctx, struct io_file_table* table, unsigned nr_files | io_alloc_file_tables | io_uring/filetable.h | function to allocate file tables
+io_free_file_tables | io_uring/filetable.h | struct io_ring_ctx* ctx, struct io_file_table* table | io_free_file_tables | io_uring/filetable.h | function to free file tables
+io_fixed_fd_install | io_uring/filetable.h | struct io_kiocb* req, unsigned int issue_flags, struct file* file, unsigned int file_slot | io_fixed_fd_install | io_uring/filetable.h | function to install a fixed fd
+__io_fixed_fd_install | io_uring/filetable.h | struct io_ring_ctx* ctx, struct file* file | __io_fixed_fd_install | io_uring/filetable.h | function to install fixed fd (internal)
+io_fixed_fd_remove | io_uring/filetable.h | struct io_ring_ctx* ctx, unsigned int offset | io_fixed_fd_remove | io_uring/filetable.h | function to remove fixed fd
+io_register_file_alloc_range | io_uring/filetable.h | struct io_ring_ctx* ctx, struct io_uring_file_index_range __user* arg | io_register_file_alloc_range | io_uring/filetable.h | function to register file allocation range
+io_file_get_flags | io_uring/filetable.h | struct file* file | io_file_get_flags | io_uring/filetable.h | function to get file flags
+io_file_bitmap_clear | io_uring/filetable.h | struct io_file_table* table, int bit | io_file_bitmap_clear | io_uring/filetable.h | function to clear file bitmap
+io_file_bitmap_set | io_uring/filetable.h | struct io_file_table* table, int bit | io_file_bitmap_set | io_uring/filetable.h | function to set file bitmap
+io_slot_flags | io_uring/filetable.h | struct io_rsrc_node* node | io_slot_flags | io_uring/filetable.h | function to get flags for file slot
+io_slot_file | io_uring/filetable.h | struct io_rsrc_node* node | io_slot_file | io_uring/filetable.h | function to get file associated with a slot
+io_fixed_file_set | io_uring/filetable.h | struct io_rsrc_node* node, struct file* file | io_fixed_file_set | io_uring/filetable.h | function to set file for fixed slot
+io_file_table_set_alloc_range | io_uring/filetable.h | struct io_ring_ctx* ctx | io_file_table_set_alloc_range | io_uring/filetable.h | function to set allocation range for file table
+io_ring_ctx | io_uring/napi.h | various (context structure) | io_napi_init, io_napi_free, io_register_napi, io_unregister_napi, __io_napi_add_id, __io_napi_busy_loop, io_napi_sqpoll_busy_poll, io_napi, io_napi_add | io_uring/napi.h | structure for ring context
+io_napi_init | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_init | io_uring/napi.h | function to initialize napi for io_ring_ctx
+io_napi_free | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_free | io_uring/napi.h | function to free napi resources for io_ring_ctx
+io_register_napi | io_uring/napi.h | struct io_ring_ctx* ctx, void __user* arg | io_register_napi | io_uring/napi.h | function to register napi
+io_unregister_napi | io_uring/napi.h | struct io_ring_ctx* ctx, void __user* arg | io_unregister_napi | io_uring/napi.h | function to unregister napi
+__io_napi_add_id | io_uring/napi.h | struct io_ring_ctx* ctx, unsigned int napi_id | __io_napi_add_id | io_uring/napi.h | function to add napi id
+__io_napi_busy_loop | io_uring/napi.h | struct io_ring_ctx* ctx, struct io_wait_queue* iowq | __io_napi_busy_loop | io_uring/napi.h | function for busy loop in napi
+io_napi_sqpoll_busy_poll | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_sqpoll_busy_poll | io_uring/napi.h | function to poll for sqpoll busy state
+io_napi | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi | io_uring/napi.h | function to check napi status
+io_napi_add | io_uring/napi.h | struct io_kiocb* req | io_napi_add | io_uring/napi.h | function to add napi request
+io_napi_busy_loop | io_uring/napi.h | struct io_ring_ctx* ctx, struct io_wait_queue* iowq | io_napi_busy_loop | io_uring/napi.h | function for busy loop in napi (inline)
+io_napi_add | io_uring/napi.h | struct io_kiocb* req | io_napi_add | io_uring/napi.h | function for adding napi to io_kiocb (inline)
+io_napi_sqpoll_busy_poll | io_uring/napi.h | struct io_ring_ctx* ctx | io_napi_sqpoll_busy_poll | io_uring/napi.h | function to poll sqpoll busy (inline)
+io_epoll_ctl_prep | io_uring/epoll.h | struct io_kiocb* req, const struct io_uring_sqe* sqe | io_epoll_ctl_prep | io_uring/epoll.h | function to prepare epoll control operation
+io_epoll_ctl | io_uring/epoll.h | struct io_kiocb* req, unsigned int issue_flags | io_epoll_ctl | io_uring/epoll.h | function to perform epoll control
+io_alloc_file_tables | io_uring/filetable.h | struct io_ring_ctx* ctx, struct io_file_table* table, unsigned nr_files | io_alloc_file_tables | io_uring/filetable.h | function to allocate file tables
+io_free_file_tables | io_uring/filetable.h | struct io_ring_ctx* ctx, struct io_file_table* table | io_free_file_tables | io_uring/filetable.h | function to free file tables
+io_fixed_fd_install | io_uring/filetable.h | struct io_kiocb* req, unsigned int issue_flags, struct file* file, unsigned int file_slot | io_fixed_fd_install | io_uring/filetable.h | function to install a fixed fd
+__io_fixed_fd_install | io_uring/filetable.h | struct io_ring_ctx* ctx, struct file* file | __io_fixed_fd_install | io_uring/filetable.h | function to install fixed fd (internal)
+io_fixed_fd_remove | io_uring/filetable.h | struct io_ring_ctx* ctx, unsigned int offset | io_fixed_fd_remove | io_uring/filetable.h | function to remove fixed fd
+io_register_file_alloc_range | io_uring/filetable.h | struct io_ring_ctx* ctx, struct io_uring_file_index_range __user* arg | io_register_file_alloc_range | io_uring/filetable.h | function to register file allocation range
+io_file_get_flags | io_uring/filetable.h | struct file* file | io_file_get_flags | io_uring/filetable.h | function to get file flags
+io_file_bitmap_clear | io_uring/filetable.h | struct io_file_table* table, int bit | io_file_bitmap_clear | io_uring/filetable.h | function to clear file bitmap
+io_file_bitmap_set | io_uring/filetable.h | struct io_file_table* table, int bit | io_file_bitmap_set | io_uring/filetable.h | function to set file bitmap
+io_slot_flags | io_uring/filetable.h | struct io_rsrc_node* node | io_slot_flags | io_uring/filetable.h | function to get flags for file slot
+io_slot_file | io_uring/filetable.h | struct io_rsrc_node* node | io_slot_file | io_uring/filetable.h | function to get file associated with a slot
+io_fixed_file_set | io_uring/filetable.h | struct io_rsrc_node* node, struct file* file | io_fixed_file_set | io_uring/filetable.h | function to set file for fixed slot
+io_file_table_set_alloc_range | io_uring/filetable.h | struct io_ring_ctx* ctx | io_file_table_set_alloc_range | io_uring/filetable.h | function to set allocation range for file table
+io_timeout_data|io_uring/timeout.h|struct io_kiocb *req, struct hrtimer timer, struct timespec64 ts|N/A|N/A|structure holding data for a timeout request
+__io_disarm_linked_timeout|io_uring/timeout.h|struct io_kiocb *req, struct io_kiocb *link|__io_disarm_linked_timeout|io_uring/timeout.h|disarms a linked timeout if it exists
+io_disarm_linked_timeout|io_uring/timeout.h|struct io_kiocb *req|io_disarm_linked_timeout|io_uring/timeout.h|inline wrapper to disarm linked timeout
+io_flush_timeouts|io_uring/timeout.h|struct io_ring_ctx *ctx|io_flush_timeouts|io_uring/timeout.h|flushes all pending timeouts from a context
+io_timeout_cancel|io_uring/timeout.h|struct io_ring_ctx *ctx, struct io_cancel_data *cd|io_timeout_cancel|io_uring/timeout.h|attempts to cancel a timeout based on cancel data
+io_kill_timeouts|io_uring/timeout.h|struct io_ring_ctx *ctx, struct io_uring_task *tctx|io_kill_timeouts|io_uring/timeout.h|kills all timeouts associated with a task context
+io_queue_linked_timeout|io_uring/timeout.h|struct io_kiocb *req|io_queue_linked_timeout|io_uring/timeout.h|queues a linked timeout request
+io_disarm_next|io_uring/timeout.h|struct io_kiocb *req|io_disarm_next|io_uring/timeout.h|disarms the next linked timeout in the chain
+io_timeout_prep|io_uring/timeout.h|struct io_kiocb *req, const struct io_uring_sqe *sqe|io_timeout_prep|io_uring/timeout.h|prepares a timeout request from a submission queue entry
+io_link_timeout_prep|io_uring/timeout.h|struct io_kiocb *req, const struct io_uring_sqe *sqe|io_link_timeout_prep|io_uring/timeout.h|prepares a linked timeout request
+io_timeout|io_uring/timeout.h|struct io_kiocb *req, unsigned int issue_flags|io_timeout|io_uring/timeout.h|executes a timeout request
+io_timeout_remove_prep|io_uring/timeout.h|struct io_kiocb *req, const struct io_uring_sqe *sqe|io_timeout_remove_prep|io_uring/timeout.h|prepares removal of a timeout
+io_timeout_remove|io_uring/timeout.h|struct io_kiocb *req, unsigned int issue_flags|io_timeout_remove|io_uring/timeout.h|removes a registered timeout request
 
 If the following row value in a column is missing, assume the value is the same with the previous row in the same column. 
 Continue until all data structures documented properly.
