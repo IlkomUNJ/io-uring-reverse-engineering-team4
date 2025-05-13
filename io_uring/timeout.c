@@ -13,6 +13,12 @@
 #include "cancel.h"
 #include "timeout.h"
 
+/*
+ * io_is_timeout_noseq - check if timeout has no sequence dependency
+ * @req:      request associated with timeout
+ *
+ * Return true if timeout doesn't have offset set or is multishot.
+ */
 struct io_timeout {
 	struct file			*file;
 	u32				off;
@@ -25,6 +31,12 @@ struct io_timeout {
 	struct io_kiocb			*prev;
 };
 
+/*
+ * io_put_req - drop reference and free request if no longer used
+ * @req:      the request to drop reference to
+ *
+ * Completes and frees the request if reference reaches zero.
+ */
 struct io_timeout_rem {
 	struct file			*file;
 	u64				addr;
@@ -35,6 +47,15 @@ struct io_timeout_rem {
 	bool				ltimeout;
 };
 
+
+/*
+ * io_timeout_finish - determine if timeout should complete
+ * @timeout:  timeout data
+ * @data:     associated timeout data
+ *
+ * Returns true if this is the last firing of a multishot timeout,
+ * or if it is a oneshot.
+ */
 static inline bool io_is_timeout_noseq(struct io_kiocb *req)
 {
 	struct io_timeout *timeout = io_kiocb_to_cmd(req, struct io_timeout);
@@ -43,6 +64,13 @@ static inline bool io_is_timeout_noseq(struct io_kiocb *req)
 	return !timeout->off || data->flags & IORING_TIMEOUT_MULTISHOT;
 }
 
+/*
+ * io_timeout_complete - complete timeout request
+ * @req:      timeout request to complete
+ * @tw:       token for task work submission
+ *
+ * Re-arms timer for multishot if needed, else completes the request.
+ */
 static inline void io_put_req(struct io_kiocb *req)
 {
 	if (req_ref_put_and_test(req)) {
@@ -51,6 +79,13 @@ static inline void io_put_req(struct io_kiocb *req)
 	}
 }
 
+/*
+ * io_flush_killed_timeouts - complete all timeouts in list
+ * @list:     list of killed timeout requests
+ * @err:      error code to complete with
+ *
+ * Completes all timeouts in list with provided error.
+ */
 static inline bool io_timeout_finish(struct io_timeout *timeout,
 				     struct io_timeout_data *data)
 {
@@ -65,6 +100,13 @@ static inline bool io_timeout_finish(struct io_timeout *timeout,
 
 static enum hrtimer_restart io_timeout_fn(struct hrtimer *timer);
 
+/*
+ * io_kill_timeout - cancel timer and move timeout to pending list
+ * @req:      timeout request
+ * @list:     list to append killed timeout to
+ *
+ * Cancels timer if active and moves request to provided list.
+ */
 static void io_timeout_complete(struct io_kiocb *req, io_tw_token_t tw)
 {
 	struct io_timeout *timeout = io_kiocb_to_cmd(req, struct io_timeout);
@@ -85,6 +127,12 @@ static void io_timeout_complete(struct io_kiocb *req, io_tw_token_t tw)
 	io_req_task_complete(req, tw);
 }
 
+/*
+ * io_flush_timeouts - flush expired timeouts from ring
+ * @ctx:      ring context
+ *
+ * Checks and flushes all timeouts whose target_seq has been reached.
+ */
 static __cold bool io_flush_killed_timeouts(struct list_head *list, int err)
 {
 	if (list_empty(list))
@@ -105,6 +153,13 @@ static __cold bool io_flush_killed_timeouts(struct list_head *list, int err)
 	return true;
 }
 
+/*
+ * io_req_tw_fail_links - fail linked requests
+ * @link:     start of link chain
+ * @tw:       task work token
+ *
+ * Completes all linked requests with -ECANCELED or preserved failure.
+ */
 static void io_kill_timeout(struct io_kiocb *req, struct list_head *list)
 	__must_hold(&req->ctx->timeout_lock)
 {
@@ -119,6 +174,12 @@ static void io_kill_timeout(struct io_kiocb *req, struct list_head *list)
 	}
 }
 
+/*
+ * io_fail_links - propagate failure to linked requests
+ * @req:      request whose links are to be failed
+ *
+ * Sets failure result for each linked request and schedules completion.
+ */
 __cold void io_flush_timeouts(struct io_ring_ctx *ctx)
 {
 	struct io_timeout *timeout, *tmp;
@@ -154,6 +215,15 @@ __cold void io_flush_timeouts(struct io_ring_ctx *ctx)
 	io_flush_killed_timeouts(&list, 0);
 }
 
+/*
+ * io_req_tw_fail_links - Cancel and complete linked requests
+ * @link: first linked request to fail
+ * @tw: task_work token
+ *
+ * Traverses the linked list of requests starting from @link,
+ * marks each as canceled (or reuses existing error if REQ_F_FAIL set),
+ * and completes them.
+ */
 static void io_req_tw_fail_links(struct io_kiocb *link, io_tw_token_t tw)
 {
 	io_tw_lock(link->ctx, tw);
@@ -170,6 +240,14 @@ static void io_req_tw_fail_links(struct io_kiocb *link, io_tw_token_t tw)
 	}
 }
 
+/*
+ * io_fail_links - Mark and complete linked requests on failure
+ * @req: original request whose links are being failed
+ *
+ * Marks linked requests with skip flags or clears them based on whether
+ * completions should be ignored, and schedules fail work for them.
+ * Must be called with completion_lock held.
+ */
 static void io_fail_links(struct io_kiocb *req)
 	__must_hold(&req->ctx->completion_lock)
 {
@@ -194,6 +272,12 @@ static void io_fail_links(struct io_kiocb *req)
 	req->link = NULL;
 }
 
+/*
+ * io_remove_next_linked - Remove the next request from the linked chain
+ * @req: request with links
+ *
+ * Unlinks the next request from @req and clears its link field.
+ */
 static inline void io_remove_next_linked(struct io_kiocb *req)
 {
 	struct io_kiocb *nxt = req->link;
@@ -202,6 +286,15 @@ static inline void io_remove_next_linked(struct io_kiocb *req)
 	nxt->link = NULL;
 }
 
+/*
+ * io_disarm_next - Disarm a linked timeout request
+ * @req: the request disarming its next linked timeout
+ *
+ * Disarms either an armed link-timeout or a linked timeout request.
+ * Completes the disarmed timeout with -ECANCELED.
+ * If the current request is marked as failed and is not a hard link,
+ * fail the remaining chain.
+ */
 void io_disarm_next(struct io_kiocb *req)
 	__must_hold(&req->ctx->completion_lock)
 {
@@ -228,6 +321,16 @@ void io_disarm_next(struct io_kiocb *req)
 		io_fail_links(req);
 }
 
+/*
+ * __io_disarm_linked_timeout - Try to disarm a linked timeout
+ * @req: request initiating the disarm
+ * @link: timeout request to disarm
+ *
+ * Attempts to cancel the timer for a linked timeout and removes it
+ * from the timeout list. Returns the timeout request if canceled
+ * successfully, NULL otherwise. Requires both completion and timeout
+ * locks held.
+ */
 struct io_kiocb *__io_disarm_linked_timeout(struct io_kiocb *req,
 					    struct io_kiocb *link)
 	__must_hold(&req->ctx->completion_lock)
@@ -246,6 +349,14 @@ struct io_kiocb *__io_disarm_linked_timeout(struct io_kiocb *req,
 	return NULL;
 }
 
+/*
+ * io_timeout_fn - hrtimer callback for expiring timeouts
+ * @timer: the hrtimer that expired
+ *
+ * Called when a timeout expires. Removes the timeout from the list,
+ * updates cq_timeouts, sets result to -ETIME, and schedules task work
+ * for completion.
+ */
 static enum hrtimer_restart io_timeout_fn(struct hrtimer *timer)
 {
 	struct io_timeout_data *data = container_of(timer,
@@ -270,6 +381,15 @@ static enum hrtimer_restart io_timeout_fn(struct hrtimer *timer)
 	return HRTIMER_NORESTART;
 }
 
+/*
+ * io_timeout_extract - Extract and cancel a matching timeout request
+ * @ctx: ring context
+ * @cd: cancelation data
+ *
+ * Searches timeout_list for a matching timeout request. If found and
+ * the timer can be canceled, removes it from the list and returns it.
+ * Returns an ERR_PTR on failure.
+ */
 static struct io_kiocb *io_timeout_extract(struct io_ring_ctx *ctx,
 					   struct io_cancel_data *cd)
 	__must_hold(&ctx->timeout_lock)
@@ -297,6 +417,14 @@ static struct io_kiocb *io_timeout_extract(struct io_ring_ctx *ctx,
 	return req;
 }
 
+/*
+ * io_timeout_cancel - Attempt to cancel a timeout request
+ * @ctx: ring context
+ * @cd: cancelation data
+ *
+ * Extracts and cancels a timeout request if found. If canceled,
+ * schedules failure completion. Must be called with completion_lock held.
+ */
 int io_timeout_cancel(struct io_ring_ctx *ctx, struct io_cancel_data *cd)
 	__must_hold(&ctx->completion_lock)
 {
@@ -312,6 +440,15 @@ int io_timeout_cancel(struct io_ring_ctx *ctx, struct io_cancel_data *cd)
 	return 0;
 }
 
+/*
+ * io_req_task_link_timeout - Handle completion of a link timeout
+ * @req: timeout request
+ * @tw: task_work token
+ *
+ * Called when a link timeout expires. If a previous request exists,
+ * tries to cancel it. Otherwise, completes with -ETIME. If canceling
+ * fails, fallback to ETIME. Drops reference to previous request.
+ */
 static void io_req_task_link_timeout(struct io_kiocb *req, io_tw_token_t tw)
 {
 	struct io_timeout *timeout = io_kiocb_to_cmd(req, struct io_timeout);
