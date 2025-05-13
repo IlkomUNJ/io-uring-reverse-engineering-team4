@@ -105,110 +105,268 @@ The rw.c file deals with read/write operations in the kernel, particularly for m
 The timeout.c file handles timeout-related functionality within the kernel. It provides mechanisms for scheduling events or operations to occur after a specified time delay or when a timeout condition is met. Functions like set_timeout() allow the kernel to schedule an event to occur after a certain period, while check_timeout() checks whether a scheduled event has timed out. The file also includes clear_timeout(), which removes or cancels a scheduled timeout event.
 
 ## Headers
-### advice.h 
-The advise.h file contains definitions and declarations related to file advisory operations, such as the posix_fadvise() system call. This system call is used to provide advice to the kernel about the expected usage patterns of a file (e.g., whether it will be accessed sequentially or randomly). The header defines constants, such as POSIX_FADV_DONTNEED and POSIX_FADV_WILLNEED, and function prototypes for posix_fadvise() and other related functions, which help optimize file system performance based on how a file is expected to be used.
+### advise.h 
+1. int io_madvise_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_madvise(struct io_kiocb *req, unsigned int issue_flags);
+3. int io_fadvise_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+4. int io_fadvise(struct io_kiocb *req, unsigned int issue_flags);
+
 
 ### filetable.h  
-The filetable.h file defines structures and function prototypes related to file tables in the kernel. File tables track the open files for each process. It includes definitions for managing file descriptors, file structures, and their interactions with system calls like open(), close(), and dup(). The header provides prototypes for functions like get_empty_fd(), which retrieves an available file descriptor, and release_fd(), which releases a file descriptor when it is no longer needed. It is crucial for managing the lifecycle of file descriptors within the system.
+1. bool io_alloc_file_tables(struct io_ring_ctx *ctx, struct io_file_table *table, unsigned nr_files);
+2. void io_free_file_tables(struct io_ring_ctx *ctx, struct io_file_table *table);
+3. int io_fixed_fd_remove(struct io_ring_ctx *ctx, unsigned int offset);
+4. io_req_flags_t io_file_get_flags(struct file *file);
+
 
 ### memmap.h    
-The memmap.h file defines structures and function prototypes related to memory mapping operations, such as mmap() and munmap(). It includes definitions for memory regions and their management, including the mapping of virtual memory addresses to physical memory or files. Functions like remap_page_range() and mmap_region() handle the low-level details of mapping regions of memory and ensuring that appropriate protections (e.g., read, write) are applied to the memory regions. The header is essential for managing memory pages and mappings in both user and kernel space.
+1. int io_uring_mmap(struct file *file, struct vm_area_struct *vma);
+2. void io_free_region(struct io_ring_ctx *ctx, struct io_mapped_region *mr);
 
 ### opdef.h  
-The opdef.h file provides definitions and declarations for operations within a given subsystem, particularly for file I/O and other related operations. It might include structures and constants for defining the types of operations (e.g., read, write, open, close) and function prototypes for handling these operations. This header helps to structure how operations are executed and managed across different subsystems, possibly for systems like io_uring or other asynchronous I/O frameworks.
+1. bool io_uring_op_supported(u8 opcode);
+2. void io_uring_optable_init(void);
+
 
 ### rw.h     
-The rw.h file defines structures and functions related to read/write (R/W) operations within the kernel. This can include definitions for read/write locks (RWL) that allow multiple readers but ensure exclusive access to writers. It contains function prototypes for handling R/W operations on files or devices, such as read() and write(), and it manages synchronization to ensure that read/write access is handled safely in multi-threaded or multi-process environments. This header is critical for managing I/O operations and preventing race conditions during concurrent access.
+1. int io_prep_read_fixed(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_prep_write_fixed(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+3. int io_prep_readv(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+4. int io_prep_writev(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+5. int io_prep_read(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+6. int io_prep_write(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+7. int io_read(struct io_kiocb *req, unsigned int issue_flags);
+8. int io_write(struct io_kiocb *req, unsigned int issue_flags);
+9. void io_readv_writev_cleanup(struct io_kiocb *req);
+10. void io_rw_fail(struct io_kiocb *req);
+11. void io_req_rw_complete(struct io_kiocb *req, struct io_tw_state *ts);
+12. int io_read_mshot_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+13. int io_read_mshot(struct io_kiocb *req, unsigned int issue_flags);
+14. void io_rw_cache_free(const void *entry);
+
 
 ### tctx.h
-The tctx.h file defines structures and functions related to task contexts. A task context encapsulates all the state information necessary to resume or switch a task (thread or process) in the kernel. It includes definitions for structures like task_context, which store execution context data, and function prototypes for managing task contexts such as tctx_create(), tctx_switch(), and tctx_destroy(). This header plays an important role in task scheduling and context switching, allowing the kernel to manage the execution of processes and threads.
+1. void io_uring_del_tctx_node(unsigned long index);
+2. int __io_uring_add_tctx_node(struct io_ring_ctx *ctx);
+3. int __io_uring_add_tctx_node_from_submit(struct io_ring_ctx *ctx);
+4. void io_uring_clean_tctx(struct io_uring_task *tctx);
+5. void io_uring_unreg_ringfd(void);
+
 
 ### alloc_cache.h  
-The alloc_cache.h file defines the structures and functions related to memory allocation caches within the kernel. It provides an efficient way to allocate and deallocate small chunks of memory for frequent allocations, which helps reduce overhead and improve performance. The header includes definitions for memory cache structures, such as kmem_cache, and function prototypes for operations like kmem_cache_alloc() and kmem_cache_free(). These functions are central to kernel memory management, particularly for object-oriented allocation in subsystems like file systems or device drivers.
+1. void *io_cache_alloc_new(struct io_alloc_cache *cache, gfp_t gfp);
 
 ### fs.h  
-The fs.h file defines the structures, macros, and function prototypes for interacting with file systems in the kernel. It includes core components like file_operations, which defines the system calls for file manipulation (e.g., open, read, write, close), and structures for representing file system objects, such as super_block and inode. The header is essential for managing file system interactions, as it enables the kernel to interact with files, directories, and other file system objects through a unified interface.
+1. int io_renameat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_renameat(struct io_kiocb *req, unsigned int issue_flags);
+3. void io_renameat_cleanup(struct io_kiocb *req);
+4. int io_unlinkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+5. int io_unlinkat(struct io_kiocb *req, unsigned int issue_flags);
+6. void io_unlinkat_cleanup(struct io_kiocb *req);
+7. int io_mkdirat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+8. int io_mkdirat(struct io_kiocb *req, unsigned int issue_flags);
+9. void io_mkdirat_cleanup(struct io_kiocb *req);
+10. int io_symlinkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+11. int io_symlinkat(struct io_kiocb *req, unsigned int issue_flags);
+12. int io_linkat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+13. int io_linkat(struct io_kiocb *req, unsigned int issue_flags);
+14. void io_link_cleanup(struct io_kiocb *req);
+
 
 ### msg_ring.h  
-The msg_ring.h file defines the structures and functions related to message rings, which are typically used in systems that require efficient inter-process or inter-thread communication. The message ring is often used to send messages or signals between different parts of the system with minimal overhead. The header includes structures like msg_ring for storing messages and function prototypes for operations like msg_ring_enqueue(), which adds a message to the ring, and msg_ring_dequeue(), which retrieves messages from the ring.
+1. int io_uring_sync_msg_ring(struct io_uring_sqe *sqe);
+2. int io_msg_ring_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+3. int io_msg_ring(struct io_kiocb *req, unsigned int issue_flags);
+4. void io_msg_ring_cleanup(struct io_kiocb *req);
 
 ### openclose.h  
-The openclose.h file defines the structures and function prototypes related to the opening and closing of files or devices within the kernel. It includes the function prototypes for system calls like open() and close(), which handle the initialization and cleanup of file descriptors. The header may also define constants and structures for managing file access modes and flags, ensuring that files are opened with the correct permissions and that resources are properly released when they are closed.
-
-### slist.h   
-The slist.h file defines the structures and function prototypes for singly linked lists. Singly linked lists are used for dynamic data structures in kernel code, allowing efficient insertion and removal of elements. The header includes definitions for slist_head, which represents the head of the list, and function prototypes for operations like slist_add(), which adds an element to the list, and slist_remove(), which removes an element from the list. This data structure is commonly used in scenarios that require quick and flexible management of data items.
+1. int io_openat_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_openat(struct io_kiocb *req, unsigned int issue_flags);
+3. void io_open_cleanup(struct io_kiocb *req);
+4. int io_openat2_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+5. int io_openat2(struct io_kiocb *req, unsigned int issue_flags);
+6. int io_close_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+7. int io_close(struct io_kiocb *req, unsigned int issue_flags);
+8. int io_install_fixed_fd_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+9. int io_install_fixed_fd(struct io_kiocb *req, unsigned int issue_flags);
 
 ### timeout.h
-The timeout.h file defines the structures and functions related to timeout management in the kernel. It provides mechanisms to schedule operations that should be executed after a specific time period or when a timeout condition is met. This header includes structures like timeout, which represents a scheduled timeout, and functions like set_timeout(), which sets a timeout for an operation, and clear_timeout(), which cancels a previously set timeout. The file is essential for handling time-based events in kernel operations.
+1. int io_timeout_cancel(struct io_ring_ctx *ctx, struct io_cancel_data *cd);
+2. void io_queue_linked_timeout(struct io_kiocb *req);
+3. void io_disarm_next(struct io_kiocb *req);
+4. int io_timeout_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+5. int io_link_timeout_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+6. int io_timeout(struct io_kiocb *req, unsigned int issue_flags);
+7. int io_timeout_remove_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+8. int io_timeout_remove(struct io_kiocb *req, unsigned int issue_flags);
 
 ### cancel.h       
-The cancel.h file defines the structures and functions necessary to cancel ongoing I/O operations or tasks in the kernel. It includes the function prototype for io_cancel(), which is responsible for canceling pending I/O requests. Additionally, this header may define mechanisms to mark a request as canceled and ensure that resources allocated to canceled requests are properly released, maintaining system stability.
+1. int io_async_cancel_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_async_cancel(struct io_kiocb *req, unsigned int issue_flags);
+3. int io_sync_cancel(struct io_ring_ctx *ctx, void __user *arg);
+4. bool io_cancel_req_match(struct io_kiocb *req, struct io_cancel_data *cd);
 
 ### futex.h      
-The futex.h file defines the structures and function prototypes related to the futex (fast user-space mutex) system. The futex system provides fast, user-space locking mechanisms to reduce kernel involvement in thread synchronization. This header includes function prototypes for operations such as sys_futex(), which handles the kernel-level implementation of futex, and futex_wait() and futex_wake(), which manage waiting and signaling on futexes for inter-process or inter-thread synchronization.
+1. int io_futex_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_futexv_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+3. int io_futex_wait(struct io_kiocb *req, unsigned int issue_flags);
+4. int io_futexv_wait(struct io_kiocb *req, unsigned int issue_flags);
+5. int io_futex_wake(struct io_kiocb *req, unsigned int issue_flags);
+6. bool io_futex_cache_init(struct io_ring_ctx *ctx);
+7. void io_futex_cache_free(struct io_ring_ctx *ctx);
 
 ### napi.h      
-The napi.h file defines the structures and functions related to the NAPI (New API) mechanism in network drivers. NAPI improves the efficiency of network packet reception by reducing interrupt overhead through polling. This header includes function prototypes like napi_enable(), which enables NAPI for a network device, and napi_poll(), which handles the polling process for incoming packets. It also defines structures such as napi_struct to manage the state of polling operations.
+1. void io_napi_init(struct io_ring_ctx *ctx);
+2. void io_napi_free(struct io_ring_ctx *ctx);
+3. int io_register_napi(struct io_ring_ctx *ctx, void __user *arg);
+4. int io_unregister_napi(struct io_ring_ctx *ctx, void __user *arg);
+5. int __io_napi_add_id(struct io_ring_ctx *ctx, unsigned int napi_id);
+6. void __io_napi_busy_loop(struct io_ring_ctx *ctx, struct io_wait_queue *iowq);
+7. int io_napi_sqpoll_busy_poll(struct io_ring_ctx *ctx);
 
 ### poll.h   
-The poll.h file defines the structures and functions related to the poll() system call, which is used to monitor multiple file descriptors to see if they are ready for I/O operations. This header contains function prototypes like sys_poll(), which implements the poll() system call for waiting on multiple file descriptors, and poll_select() for handling events in a similar manner as select(). The file also defines constants for specifying different events that can be polled for, such as POLLIN, POLLOUT, and POLLERR.
+1. int io_poll_add_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_poll_add(struct io_kiocb *req, unsigned int issue_flags);
+3. int io_poll_remove_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+4. int io_poll_remove(struct io_kiocb *req, unsigned int issue_flags);
+5. int io_arm_poll_handler(struct io_kiocb *req, unsigned issue_flags);
+6. void io_poll_task_func(struct io_kiocb *req, struct io_tw_state *ts);
 
 ### splice.h  
-The splice.h file defines the structures and function prototypes related to the splice() system call, which enables zero-copy data transfer between file descriptors or between a file descriptor and a pipe. This header includes function prototypes like sys_splice(), which implements the splice system call, and splice_to_pipe() and splice_from_pipe(), which handle data transfers between file descriptors and pipes. The file is essential for improving I/O performance by avoiding unnecessary data copying.
+1. int io_tee_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_tee(struct io_kiocb *req, unsigned int issue_flags);
+3. void io_splice_cleanup(struct io_kiocb *req);
+4. int io_splice_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+5. int io_splice(struct io_kiocb *req, unsigned int issue_flags);
+
 
 ### truncate.h
-The truncate.h file defines the structures and function prototypes related to file truncation, which involves changing the size of a file. This header includes the sys_truncate() function prototype, which implements the system call for truncating a file to a specified length, and ftruncate(), which performs the same operation on an open file descriptor. The header is crucial for managing file sizes and handling operations that require truncating files for space management or system cleanup.
+1. int io_ftruncate_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_ftruncate(struct io_kiocb *req, unsigned int issue_flags);
+
 
 ### epoll.h      
-The epoll.h file defines the structures and functions related to the epoll API, which is used to efficiently monitor multiple file descriptors for events such as data being available for reading or writing. This header contains function prototypes for sys_epoll_create(), which creates an epoll instance, and epoll_ctl(), which adds, modifies, or removes file descriptors from the epoll instance. It also includes epoll_wait(), which waits for events on registered file descriptors, enabling scalable event notification.
+1. int io_epoll_ctl_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_epoll_ctl(struct io_kiocb *req, unsigned int issue_flags);
 
 ### io_uring.h   
-The io_uring.h file defines the structures and functions for the io_uring subsystem, which enables efficient asynchronous I/O operations. This header includes function prototypes such as io_uring_setup(), which initializes an io_uring instance, and io_uring_submit(), which submits I/O requests to the kernel. It also defines structures like io_uring_sqe and io_uring_cqe, which represent the submission and completion queue entries for I/O operations in the io_uring framework.
+1. int io_uring_fill_params(unsigned entries, struct io_uring_params *p);
+2. bool io_cqe_cache_refill(struct io_ring_ctx *ctx, bool overflow);
+3. int io_run_task_work_sig(struct io_ring_ctx *ctx);
+4. void io_req_defer_failed(struct io_kiocb *req, s32 res);
+5. bool io_post_aux_cqe(struct io_ring_ctx *ctx, u64 user_data, s32 res, u32 cflags);
+6. void io_add_aux_cqe(struct io_ring_ctx *ctx, u64 user_data, s32 res, u32 cflags);
+7. bool io_req_post_cqe(struct io_kiocb *req, s32 res, u32 cflags);
+8. void __io_commit_cqring_flush(struct io_ring_ctx *ctx);
+9. void __io_req_task_work_add(struct io_kiocb *req, unsigned flags);
+10. bool io_alloc_async_data(struct io_kiocb *req);
+11. void io_req_task_queue(struct io_kiocb *req);
+12. void io_req_task_complete(struct io_kiocb *req, struct io_tw_state *ts);
+13. void io_req_task_queue_fail(struct io_kiocb *req, int ret);
+14. void io_req_task_submit(struct io_kiocb *req, struct io_tw_state *ts);
+15. void tctx_task_work(struct callback_head *cb);
+16. void io_req_queue_iowq(struct io_kiocb *req);
+17. int io_poll_issue(struct io_kiocb *req, struct io_tw_state *ts);
+18. int io_submit_sqes(struct io_ring_ctx *ctx, unsigned int nr);
+19. int io_do_iopoll(struct io_ring_ctx *ctx, bool force_nonspin);
+20. void __io_submit_flush_completions(struct io_ring_ctx *ctx);
+21. void io_wq_submit_work(struct io_wq_work *work);
+22. void io_free_req(struct io_kiocb *req);
+23. void io_queue_next(struct io_kiocb *req);
+24. void io_task_refs_refill(struct io_uring_task *tctx);
+25. bool __io_alloc_req_refill(struct io_ring_ctx *ctx);
+26. void io_activate_pollwq(struct io_ring_ctx *ctx);
 
-### 3net.h      
-The 3net.h file is likely a header related to networking functionality or configuration in the kernel, although its specific use may vary depending on the context. This file might include structures and function prototypes related to network device configuration, socket management, or other networking operations. It could define constants for managing network protocols, devices, and the flow of network data. If it's part of a custom or specialized networking framework, it could provide additional configuration or setup utilities for managing network resources.
-
-### refs.h     
-The refs.h file defines the structures and functions related to reference counting, which is used for managing resource lifetimes in the kernel. Reference counting helps ensure that resources are properly cleaned up when they are no longer needed. This header includes structures like refcount_t for storing reference counts and function prototypes like refcount_inc(), which increments the reference count, and refcount_dec_and_test(), which decrements the reference count and tests if it has reached zero. It is crucial for managing the lifecycle of kernel resources and avoiding memory leaks or resource mismanagement.
 
 ### sqpoll.h  
-The sqpoll.h header defines structures and functions for the submission queue polling thread used in the io_uring interface. It supports the offloading of I/O submissions to a dedicated kernel thread, which improves latency by avoiding system calls for each request. This file declares functions like io_sq_thread() that runs the polling thread loop, and io_sqpoll_wake() which wakes the thread when new submissions are available. It also defines initialization helpers and control logic for polling behavior.
+1. int io_sq_offload_create(struct io_ring_ctx *ctx, struct io_uring_params *p);
+2. void io_sq_thread_finish(struct io_ring_ctx *ctx);
+3. void io_sq_thread_stop(struct io_sq_data *sqd);
+4. void io_sq_thread_park(struct io_sq_data *sqd);
+5. void io_sq_thread_unpark(struct io_sq_data *sqd);
+6. void io_put_sq_data(struct io_sq_data *sqd);
+7. void io_sqpoll_wait_sq(struct io_ring_ctx *ctx);
+8. int io_sqpoll_wq_cpu_affinity(struct io_ring_ctx *ctx, cpumask_var_t mask);
 
 ### uring_cmd.h
-uring_cmd.h defines the structure and handling functions for uring_cmd, a flexible mechanism used to extend io_uring with custom commands, such as for device drivers or subsystems. The file includes structures like uring_cmd and function hooks for command registration and completion. Functions such as uring_cmd_complete() finalize and notify the completion of custom commands, while uring_cmd_import() helps integrate user-submitted data into the kernel’s context.
+1. int io_uring_cmd(struct io_kiocb *req, unsigned int issue_flags);
+2. int io_uring_cmd_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
 
 ### eventfd.h    
-The eventfd.h file provides the interface for working with eventfd, which allows processes to signal each other through file descriptors. It declares the internal structure eventfd_ctx and function prototypes such as eventfd_signal(), which increments the counter to signal waiting processes, and eventfd_ctx_read()/eventfd_ctx_write(), which allow reading/writing from the eventfd. It’s crucial for lightweight inter-process communication and for notifying user space from the kernel.
+1. int io_eventfd_unregister(struct io_ring_ctx *ctx);
+2. void io_eventfd_flush_signal(struct io_ring_ctx *ctx);
+3. void io_eventfd_signal(struct io_ring_ctx *ctx);
 
 ### io-wq.h
-This header defines the internal APIs for the io-wq (I/O workqueue), which supports deferred and asynchronous execution of tasks in io_uring. It includes key structures like io_wq, and functions such as io_wq_create() to initialize the workqueue, io_wq_enqueue() to queue work, and io_wq_destroy() to safely clean up. It also includes logic for binding workers to CPUs and isolating heavy operations across threads.
+1. typedef void (io_wq_work_fn)(struct io_wq_work *);
+2. void io_wq_exit_start(struct io_wq *wq);
+3. void io_wq_put_and_exit(struct io_wq *wq);
+4. void io_wq_enqueue(struct io_wq *wq, struct io_wq_work *work);
+5. void io_wq_hash_work(struct io_wq_work *work, void *val);
+6. int io_wq_cpu_affinity(struct io_uring_task *tctx, cpumask_var_t mask);
+7. int io_wq_max_workers(struct io_wq *wq, int *new_count);
+8. bool io_wq_worker_stopped(void);
+9. typedef bool (work_cancel_fn)(struct io_wq_work *, void *);
 
 ### nop.h       
-nop.h provides minimal logic for the "no operation" (NOP) opcode used in io_uring. Although it doesn’t perform any I/O, it's useful for benchmarking or chaining operations. It typically defines io_nop_prep() to prepare a NOP request and io_nop() as the execution handler that immediately completes without side effects. The header also supports testing and validating submission queue logic.
+1. int io_nop_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_nop(struct io_kiocb *req, unsigned int issue_flags);
 
 ### register.h   
-The register.h file defines the registration API for io_uring, which allows user applications to register files, buffers, and personalities to avoid repeated overhead. Functions declared here include io_register_files(), io_unregister_buffers(), and io_register_personality(). These functions help speed up I/O by allowing the kernel to reuse user-provided data structures without validation on every I/O call.
+1. int io_eventfd_unregister(struct io_ring_ctx *ctx);
+2. int io_unregister_personality(struct io_ring_ctx *ctx, unsigned id);
 
 ### statx.h   
-This header supports the statx system call, which provides extended file metadata beyond traditional stat(). It defines the statx structure and field flags, as well as functions like do_statx() that fetch file attributes and timestamps. The header ensures kernel-space can interpret user requests for optional metadata such as birth time or data versioning, and handle them conditionally.
+1. int io_statx_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_statx(struct io_kiocb *req, unsigned int issue_flags);
+3. void io_statx_cleanup(struct io_kiocb *req);
 
 ### waitid.h
-waitid.h defines the structures and prototypes for the waitid() system call, which allows a process to wait for specific child state changes (e.g., exit, stop, continue). It includes declarations like do_waitid() for the syscall logic and structures like siginfo to return exit codes or signals. It is more flexible than waitpid(), supporting options for asynchronous or targeted child management.
+1. int io_waitid_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_waitid(struct io_kiocb *req, unsigned int issue_flags);
 
 ### fdinfo.h   
-fdinfo.h provides an interface for exposing file descriptor metadata, often through /proc/[pid]/fdinfo. It declares functions like fill_fdinfo() that populate info fields like read/write positions, flags, and ownership. This header is essential for tools that monitor or debug file descriptor usage, enabling user-space insight into process internals.
+1. void io_uring_show_fdinfo(struct seq_file *m, struct file *f);
 
 ### kbuf.h       
-The kbuf.h file handles kernel buffer abstractions for io_uring. It provides mechanisms to allocate, manage, and access kernel-resident buffers used during I/O. Functions like io_alloc_kbuf() allocate memory for I/O without user interaction, while io_kbuf_recycle() may be used to reuse buffers efficiently. It also defines buffer state flags and access helpers for safety and performance.
-
-### notif.h     
-The notif.h header defines support for notifications sent via io_uring to user space, often from subsystems like networking or devices. It declares the io_notif structure and functions like io_notif_send() to queue a notification and io_notif_complete() to mark it as delivered. This is especially useful for building efficient event-driven applications that rely on kernel-to-user callbacks.
+1. int io_buffers_peek(struct io_kiocb *req, struct buf_sel_arg *arg);
+2. void io_destroy_buffers(struct io_ring_ctx *ctx);
+3. int io_remove_buffers_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+4. int io_remove_buffers(struct io_kiocb *req, unsigned int issue_flags);
+5. int io_provide_buffers_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+6. int io_provide_buffers(struct io_kiocb *req, unsigned int issue_flags);
+7. int io_register_pbuf_ring(struct io_ring_ctx *ctx, void __user *arg);
+8. int io_unregister_pbuf_ring(struct io_ring_ctx *ctx, void __user *arg);
+9. int io_register_pbuf_status(struct io_ring_ctx *ctx, void __user *arg);
+10. void __io_put_kbuf(struct io_kiocb *req, int len, unsigned issue_flags);
+11. bool io_kbuf_recycle_legacy(struct io_kiocb *req, unsigned issue_flags);
 
 ### rsrc.h
-The rsrc.h header defines structures and functions related to resource registration and management in the io_uring subsystem. It supports the internal tracking of registered resources such as files, buffers, and memory regions. This file includes function prototypes like io_rsrc_node_alloc() for allocating resource tracking nodes, and io_rsrc_put() for decrementing usage references when a resource is no longer needed. It also declares data structures like io_rsrc_node, which is used to link and organize registered resources for efficient lookup and release, ensuring correct lifecycle and concurrency handling.
+1. void io_free_rsrc_node(struct io_ring_ctx *ctx, struct io_rsrc_node *node);
+2. void io_rsrc_data_free(struct io_ring_ctx *ctx, struct io_rsrc_data *data);
+3. int io_rsrc_data_alloc(struct io_rsrc_data *data, unsigned nr);
+4. int io_register_clone_buffers(struct io_ring_ctx *ctx, void __user *arg);
+5. int io_sqe_buffers_unregister(struct io_ring_ctx *ctx);
+6. int io_sqe_files_unregister(struct io_ring_ctx *ctx);
+7. int io_files_update(struct io_kiocb *req, unsigned int issue_flags);
+8. int io_files_update_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+9. int __io_account_mem(struct user_struct *user, unsigned long nr_pages);
 
 ### sync.h    
-The sync.h header manages synchronization operations within io_uring, such as barriers and ordering mechanisms for dependent I/O requests. It defines logic for handling operations that need to wait for previous ones to complete, supporting functions like io_sync_file_range() that invokes synchronized flushing of file data ranges, and internal helpers to enforce execution order. The structures and macros defined here ensure proper coordination across batched or chained requests, which is critical in high-performance I/O scenarios where request sequencing matters.
+1. int io_sfr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+2. int io_sync_file_range(struct io_kiocb *req, unsigned int issue_flags);
+3. int io_fsync_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+4. int io_fsync(struct io_kiocb *req, unsigned int issue_flags);
+5. int io_fallocate(struct io_kiocb *req, unsigned int issue_flags);
+6. int io_fallocate_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
 
 ### xattr.h
-The xattr.h file provides definitions for handling extended file attributes (xattrs) in the kernel, which allow metadata to be associated with files beyond the standard attributes. This header includes function declarations such as io_getxattr() and io_setxattr(), which retrieve or set extended attributes on files respectively, and io_removexattr() for deleting them. These functions interface with the filesystem to enable advanced metadata storage, commonly used in security modules (e.g., SELinux labels), user-defined tags, or system indexing features.
+1. void io_xattr_cleanup(struct io_kiocb *req);
+2. int io_fsetxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+3. int io_fsetxattr(struct io_kiocb *req, unsigned int issue_flags);
+4. int io_setxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+5. int io_setxattr(struct io_kiocb *req, unsigned int issue_flags);
+6. int io_fgetxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+7. int io_fgetxattr(struct io_kiocb *req, unsigned int issue_flags);
+8. int io_getxattr_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe);
+9. int io_getxattr(struct io_kiocb *req, unsigned int issue_flags);
