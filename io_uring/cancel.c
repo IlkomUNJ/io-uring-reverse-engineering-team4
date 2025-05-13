@@ -34,6 +34,20 @@ struct io_cancel {
 /*
  * Returns true if the request matches the criteria outlined by 'cd'.
  */
+
+/*
+ * io_cancel_req_match - Check whether a request matches the cancellation criteria
+ *
+ * @req: the io_kiocb request to compare
+ * @cd: cancellation data containing matching flags and values
+ *
+ * Determines whether the given request matches the specified criteria
+ * for cancellation. These criteria can include matching context, file
+ * descriptor, opcode, user data, and sequence constraints.
+ *
+ * Returns true if the request matches and is eligible for cancellation,
+ * false otherwise.
+ */
 bool io_cancel_req_match(struct io_kiocb *req, struct io_cancel_data *cd)
 {
 	bool match_user_data = cd->flags & IORING_ASYNC_CANCEL_USERDATA;
@@ -65,6 +79,18 @@ check_seq:
 	return true;
 }
 
+/*
+ * io_cancel_cb - Callback used during cancellation to find a matching request
+ *
+ * @work: work item being considered for cancellation
+ * @data: cancellation data passed into the cancel operation
+ *
+ * Casts the generic work item back to an io_kiocb and invokes
+ * io_cancel_req_match to determine if this work should be canceled.
+ *
+ * Returns true if the request matches the cancellation conditions,
+ * false otherwise.
+ */
 static bool io_cancel_cb(struct io_wq_work *work, void *data)
 {
 	struct io_kiocb *req = container_of(work, struct io_kiocb, work);
@@ -73,6 +99,21 @@ static bool io_cancel_cb(struct io_wq_work *work, void *data)
 	return io_cancel_req_match(req, cd);
 }
 
+/*
+ * io_async_cancel_one - Attempt to cancel a single async request
+ *
+ * @tctx: the io_uring task context of the submitting thread
+ * @cd: cancellation data specifying match criteria
+ *
+ * Initiates cancellation of an asynchronous work item in the io_wq
+ * based on the given criteria. Returns appropriate error codes depending
+ * on the result of the cancellation attempt.
+ *
+ * Return values:
+ *  0            - request canceled successfully
+ * -EALREADY     - request is currently running and cannot be canceled
+ * -ENOENT       - no matching request found or io_wq is unavailable
+ */
 static int io_async_cancel_one(struct io_uring_task *tctx,
 			       struct io_cancel_data *cd)
 {
@@ -100,6 +141,19 @@ static int io_async_cancel_one(struct io_uring_task *tctx,
 	return ret;
 }
 
+/*
+ * io_try_cancel - Attempt to cancel a request from multiple sources
+ *
+ * @tctx:     io_uring task context associated with the request
+ * @cd:       cancellation data specifying match criteria
+ * @issue_flags: submission flags
+ *
+ * Tries to cancel a matching request in the async workqueue. If not found,
+ * attempts cancellation in other subsystems including poll, waitid, futex,
+ * and timeouts. If a timeout match is attempted, the completion_lock is held.
+ *
+ * Returns 0 on successful cancelation, or a negative error code if not found.
+ */
 int io_try_cancel(struct io_uring_task *tctx, struct io_cancel_data *cd,
 		  unsigned issue_flags)
 {
@@ -135,6 +189,18 @@ int io_try_cancel(struct io_uring_task *tctx, struct io_cancel_data *cd,
 	return ret;
 }
 
+/*
+ * io_async_cancel_prep - Prepare an async cancel request
+ *
+ * @req: the request context
+ * @sqe: the submission queue entry from userspace
+ *
+ * Parses and validates fields from the SQE needed for an async cancellation
+ * request. Ensures valid flag combinations and extracts the cancellation
+ * target data, such as fd or opcode.
+ *
+ * Returns 0 on success, or -EINVAL if parameters are invalid.
+ */
 int io_async_cancel_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 {
 	struct io_cancel *cancel = io_kiocb_to_cmd(req, struct io_cancel);
@@ -162,6 +228,20 @@ int io_async_cancel_prep(struct io_kiocb *req, const struct io_uring_sqe *sqe)
 	return 0;
 }
 
+/*
+ * __io_async_cancel - Internal implementation of async cancellation
+ *
+ * @cd:           cancellation data
+ * @tctx:         task context of the originating request
+ * @issue_flags:  submission flags
+ *
+ * Attempts to cancel the request identified by @cd first using the provided
+ * @tctx. If the 'all' flag is set, continues trying across all io_uring
+ * task contexts. Used internally by io_async_cancel.
+ *
+ * Returns the number of requests canceled if 'all' is set,
+ * or 0/-ENOENT/-EALREADY for single cancel operations.
+ */
 static int __io_async_cancel(struct io_cancel_data *cd,
 			     struct io_uring_task *tctx,
 			     unsigned int issue_flags)
@@ -195,6 +275,20 @@ static int __io_async_cancel(struct io_cancel_data *cd,
 	return all ? nr : ret;
 }
 
+/*
+ * io_async_cancel - Main handler for asynchronous cancellation requests
+ *
+ * @req:         the original request to cancel another operation
+ * @issue_flags: submission flags
+ *
+ * This function dispatches an asynchronous cancellation attempt using the
+ * parameters parsed and stored in the request. It handles setup for file
+ * descriptors, builds the cancellation data, and calls the internal cancel
+ * logic (__io_async_cancel). The result is stored in the request's result
+ * field for later reporting.
+ *
+ * Always returns IOU_OK. The actual success/failure is indicated in the result.
+ */
 int io_async_cancel(struct io_kiocb *req, unsigned int issue_flags)
 {
 	struct io_cancel *cancel = io_kiocb_to_cmd(req, struct io_cancel);
@@ -232,6 +326,20 @@ done:
 	return IOU_OK;
 }
 
+/*
+ * __io_sync_cancel - Internal synchronous cancelation helper
+ *
+ * @tctx: io_uring task context to cancel within
+ * @cd:   cancelation data with matching criteria
+ * @fd:   file descriptor, used if cancelation is FD-based
+ *
+ * Looks up the associated file if FD cancelation is requested and marked as
+ * fixed. If the file lookup succeeds, it sets up the `cd->file` field and
+ * invokes `__io_async_cancel` to perform the actual cancellation logic.
+ *
+ * Returns 0 on success, or a negative error code if the file is invalid or
+ * no matching operation is found.
+ */
 static int __io_sync_cancel(struct io_uring_task *tctx,
 			    struct io_cancel_data *cd, int fd)
 {
@@ -253,6 +361,24 @@ static int __io_sync_cancel(struct io_uring_task *tctx,
 	return __io_async_cancel(cd, tctx, 0);
 }
 
+/*
+ * io_sync_cancel - Handle a synchronous cancel request from userspace
+ *
+ * @ctx: io_ring_ctx of the calling process
+ * @arg: userspace pointer to a struct io_uring_sync_cancel_reg
+ *
+ * Validates the user-provided cancelation parameters and attempts to cancel
+ * a matching request synchronously. If the cancelation is not immediately
+ * successful (e.g., the target is still running), waits for completion or
+ * until a timeout is reached. Supports both fixed and non-fixed file
+ * descriptors and optional timeout.
+ *
+ * Must be called with `ctx->uring_lock` held.
+ *
+ * Returns 0 on success (including if no matching request is found),
+ * -EBADF if file lookup fails, -EINVAL for invalid input,
+ * -EFAULT if copy_from_user fails, or -ETIME if timeout expires.
+ */
 int io_sync_cancel(struct io_ring_ctx *ctx, void __user *arg)
 	__must_hold(&ctx->uring_lock)
 {
@@ -340,46 +466,4 @@ out:
 	if (file)
 		fput(file);
 	return ret;
-}
-
-bool io_cancel_remove_all(struct io_ring_ctx *ctx, struct io_uring_task *tctx,
-			  struct hlist_head *list, bool cancel_all,
-			  bool (*cancel)(struct io_kiocb *))
-{
-	struct hlist_node *tmp;
-	struct io_kiocb *req;
-	bool found = false;
-
-	lockdep_assert_held(&ctx->uring_lock);
-
-	hlist_for_each_entry_safe(req, tmp, list, hash_node) {
-		if (!io_match_task_safe(req, tctx, cancel_all))
-			continue;
-		hlist_del_init(&req->hash_node);
-		if (cancel(req))
-			found = true;
-	}
-
-	return found;
-}
-
-int io_cancel_remove(struct io_ring_ctx *ctx, struct io_cancel_data *cd,
-		     unsigned int issue_flags, struct hlist_head *list,
-		     bool (*cancel)(struct io_kiocb *))
-{
-	struct hlist_node *tmp;
-	struct io_kiocb *req;
-	int nr = 0;
-
-	io_ring_submit_lock(ctx, issue_flags);
-	hlist_for_each_entry_safe(req, tmp, list, hash_node) {
-		if (!io_cancel_req_match(req, cd))
-			continue;
-		if (cancel(req))
-			nr++;
-		if (!(cd->flags & IORING_ASYNC_CANCEL_ALL))
-			break;
-	}
-	io_ring_submit_unlock(ctx, issue_flags);
-	return nr ?: -ENOENT;
 }
