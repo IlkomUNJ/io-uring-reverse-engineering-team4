@@ -14,5 +14,8 @@ Score is mainly calculated from individual contributions made to the commit. The
 - [Task 4](/function_documentation.md)
 
 ## Team Members
-- Member A
-- Member B
+Kelompok 4
+- Aisyah Septiani Indah Rizki (1313623011)
+- Khalisa Rajwa Nazira (1313623064)
+- Nazwa Aiana Putri (1313623016)
+- Arnando Michael Gtg (1313623014)
