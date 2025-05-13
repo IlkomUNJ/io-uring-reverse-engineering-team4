@@ -13,6 +13,18 @@
 #include "rsrc.h"
 #include "filetable.h"
 
+/*
+ * io_file_bitmap_get - Find a free file slot in the fixed file bitmap
+ * @ctx: Pointer to io_uring context
+ *
+ * Scans the bitmap of fixed file slots to locate the next available slot
+ * for use. It attempts allocation starting from `alloc_hint`, wrapping
+ * around if necessary to `file_alloc_start`.
+ *
+ * Return:
+ * * Slot index on success
+ * * -ENFILE if no slots are available
+ */
 static int io_file_bitmap_get(struct io_ring_ctx *ctx)
 {
 	struct io_file_table *table = &ctx->file_table;
@@ -36,6 +48,20 @@ static int io_file_bitmap_get(struct io_ring_ctx *ctx)
 	return -ENFILE;
 }
 
+/*
+ * io_alloc_file_tables - Allocate bitmap and resource table for fixed files
+ * @ctx:       Pointer to io_uring context
+ * @table:     Pointer to the file table to initialize
+ * @nr_files:  Number of slots to allocate
+ *
+ * Allocates the internal data structures (resource table and bitmap)
+ * required to manage fixed file slots. If bitmap allocation fails,
+ * the function ensures all resources are freed before returning.
+ *
+ * Return:
+ * * true if allocation succeeded
+ * * false on failure
+ */
 bool io_alloc_file_tables(struct io_ring_ctx *ctx, struct io_file_table *table,
 			  unsigned nr_files)
 {
@@ -48,6 +74,14 @@ bool io_alloc_file_tables(struct io_ring_ctx *ctx, struct io_file_table *table,
 	return false;
 }
 
+/*
+ * io_free_file_tables - Free file table and bitmap for fixed file slots
+ * @ctx:   Pointer to io_uring context
+ * @table: Pointer to the file table to free
+ *
+ * Frees the bitmap and resource data associated with a file table
+ * used for fixed file slot management.
+ */
 void io_free_file_tables(struct io_ring_ctx *ctx, struct io_file_table *table)
 {
 	io_rsrc_data_free(ctx, &table->data);
@@ -55,6 +89,26 @@ void io_free_file_tables(struct io_ring_ctx *ctx, struct io_file_table *table)
 	table->bitmap = NULL;
 }
 
+/*
+ * io_install_fixed_file - Install a file into a fixed file slot
+ * @ctx:        Pointer to io_uring context
+ * @file:       File pointer to install
+ * @slot_index: Index in the fixed file table
+ *
+ * Installs a given file into the fixed file table at a specified index.
+ * Ensures the file is not an io_uring file and that the slot index is
+ * within bounds. If the slot was previously unused, the bitmap is updated.
+ *
+ * Context:
+ * Must be called with uring_lock held.
+ *
+ * Return:
+ * * 0 on success
+ * * -EBADF if attempting to register an io_uring file
+ * * -ENXIO if the file table is uninitialized
+ * * -EINVAL if the slot index is invalid
+ * * -ENOMEM if allocation of resource node fails
+ */
 static int io_install_fixed_file(struct io_ring_ctx *ctx, struct file *file,
 				 u32 slot_index)
 	__must_hold(&req->ctx->uring_lock)
@@ -68,7 +122,7 @@ static int io_install_fixed_file(struct io_ring_ctx *ctx, struct file *file,
 	if (slot_index >= ctx->file_table.data.nr)
 		return -EINVAL;
 
-	node = io_rsrc_node_alloc(ctx, IORING_RSRC_FILE);
+	node = io_rsrc_node_alloc(IORING_RSRC_FILE);
 	if (!node)
 		return -ENOMEM;
 
@@ -80,6 +134,21 @@ static int io_install_fixed_file(struct io_ring_ctx *ctx, struct file *file,
 	return 0;
 }
 
+/*
+ * __io_fixed_fd_install - Install or allocate a file into fixed file slots
+ * @ctx:        Pointer to io_uring context
+ * @file:       File pointer to install
+ * @file_slot:  Slot to install into, or IORING_FILE_INDEX_ALLOC to auto-allocate
+ *
+ * Installs a file into the fixed file table. If @file_slot is set to
+ * IORING_FILE_INDEX_ALLOC, the function automatically finds a free slot
+ * using io_file_bitmap_get(). Otherwise, installs at the specified slot.
+ *
+ * Return:
+ * * 0 on success
+ * * Slot index if auto-allocation was used and succeeded
+ * * Appropriate negative error code on failure
+ */
 int __io_fixed_fd_install(struct io_ring_ctx *ctx, struct file *file,
 			  unsigned int file_slot)
 {
@@ -104,6 +173,22 @@ int __io_fixed_fd_install(struct io_ring_ctx *ctx, struct file *file,
  * Note when io_fixed_fd_install() returns error value, it will ensure
  * fput() is called correspondingly.
  */
+
+/*
+ * io_fixed_fd_install - Public wrapper to install a file into a fixed slot
+ * @req:         The io_kiocb request structure
+ * @issue_flags: Submission flags passed to the request
+ * @file:        File to install
+ * @file_slot:   Slot to install into, or IORING_FILE_INDEX_ALLOC to auto-allocate
+ *
+ * Acquires the submit lock and calls __io_fixed_fd_install() to install
+ * a file into the fixed file table. If the install fails, the file is released.
+ *
+ * Return:
+ * * 0 on success
+ * * Slot index if auto-allocation succeeded
+ * * Negative error code on failure
+ */
 int io_fixed_fd_install(struct io_kiocb *req, unsigned int issue_flags,
 			struct file *file, unsigned int file_slot)
 {
@@ -119,6 +204,20 @@ int io_fixed_fd_install(struct io_kiocb *req, unsigned int issue_flags,
 	return ret;
 }
 
+/*
+ * io_fixed_fd_remove - Remove a file from the fixed file table
+ * @ctx:    Pointer to io_uring context
+ * @offset: Slot index of the file to remove
+ *
+ * Removes the file at the given offset from the fixed file table.
+ * Frees the resource node and clears the corresponding bit in the bitmap.
+ *
+ * Return:
+ * * 0 on success
+ * * -ENXIO if the file table is not initialized
+ * * -EINVAL if the offset is out of bounds
+ * * -EBADF if no file is registered at the given offset
+ */
 int io_fixed_fd_remove(struct io_ring_ctx *ctx, unsigned int offset)
 {
 	struct io_rsrc_node *node;
@@ -136,6 +235,20 @@ int io_fixed_fd_remove(struct io_ring_ctx *ctx, unsigned int offset)
 	return 0;
 }
 
+/*
+ * io_register_file_alloc_range - Set allocation range for fixed file table
+ * @ctx: Pointer to io_uring context
+ * @arg: User pointer to struct io_uring_file_index_range
+ *
+ * Validates and sets a range within the fixed file table to be used
+ * for automatic allocation. Prevents overflow and out-of-bounds access.
+ *
+ * Return:
+ * * 0 on success
+ * * -EFAULT if user memory cannot be accessed
+ * * -EOVERFLOW if range causes an overflow
+ * * -EINVAL if reserved field is non-zero or range exceeds table size
+ */
 int io_register_file_alloc_range(struct io_ring_ctx *ctx,
 				 struct io_uring_file_index_range __user *arg)
 {
